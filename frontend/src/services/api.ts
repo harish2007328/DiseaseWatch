@@ -1,14 +1,49 @@
 /// <reference types="vite/client" />
 import axios from 'axios';
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+export const getApiBase = (): string => {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('diseasewatch_api_url');
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, '');
+    }
+  }
+  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+  return 'http://localhost:8000';
+};
+
+export const setCustomApiUrl = (url: string) => {
+  if (!url || !url.trim()) {
+    localStorage.removeItem('diseasewatch_api_url');
+  } else {
+    localStorage.setItem('diseasewatch_api_url', url.trim().replace(/\/+$/, ''));
+  }
+};
+
+export const checkApiHealth = async (overrideUrl?: string): Promise<boolean> => {
+  const base = overrideUrl && overrideUrl.trim() ? overrideUrl.trim().replace(/\/+$/, '') : getApiBase();
+  try {
+    const res = await axios.get(`${base}/api/health`, { timeout: 3500 });
+    return res.status === 200;
+  } catch {
+    return false;
+  }
+};
 
 const api = axios.create({
-  baseURL: API_BASE,
-  timeout: 4000,
+  baseURL: getApiBase(),
+  timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+api.interceptors.request.use((config) => {
+  config.baseURL = getApiBase();
+  return config;
 });
 
 // Auth

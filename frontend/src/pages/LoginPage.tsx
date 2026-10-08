@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Tent, ArrowRight, AlertCircle, KeyRound, Sparkles } from 'lucide-react';
+import { Shield, Tent, ArrowRight, AlertCircle, KeyRound, Sparkles, Server } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getCamps } from '../services/api';
+import { getCamps, getApiBase } from '../services/api';
 import { Camp } from '../types';
+import { ApiConfigModal } from '../components/ApiConfigModal';
 
 export const LoginPage: React.FC = () => {
   const { loginWithRole, loginWithCredentials } = useAuth();
@@ -14,6 +15,7 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showApiModal, setShowApiModal] = useState(false);
 
   useEffect(() => {
     getCamps()
@@ -284,10 +286,24 @@ export const LoginPage: React.FC = () => {
           )}
         </div>
 
-        <p className="text-[11px] text-[#6B7280] text-center mt-5">
-          Public Health Surveillance Prototype · Non-Diagnostic Decision Aid
-        </p>
+        <div className="text-center mt-5 space-y-2">
+          <p className="text-[11px] text-[#6B7280]">
+            Public Health Surveillance Prototype · Non-Diagnostic Decision Aid
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setShowApiModal(true)}
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#6B7280] hover:text-[#0066CC] transition-colors cursor-pointer bg-[#F7F8FA] hover:bg-[#F2F3F5] px-2.5 py-1 rounded-[6px] border border-[#E5E7EB]"
+          >
+            <Server className="w-3 h-3 text-[#0066CC]" />
+            <span>Backend API:</span>
+            <span className="font-mono text-[10px] text-[#111111]">{getApiBase()}</span>
+          </button>
+        </div>
       </div>
+
+      <ApiConfigModal isOpen={showApiModal} onClose={() => setShowApiModal(false)} />
     </div>
   );
 };
