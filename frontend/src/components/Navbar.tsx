@@ -12,13 +12,14 @@ import {
   Cpu,
   UserCheck,
   ChevronDown,
+  LogOut,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getNotifications, markNotificationRead } from '../services/api';
 import { Notification } from '../types';
 
 export const Navbar: React.FC = () => {
-  const { user, role, activeCampId, switchRole } = useAuth();
+  const { user, role, activeCampId, switchRole, logout } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -304,6 +305,14 @@ export const Navbar: React.FC = () => {
                     <option value="camp-3">Camp 3: Sports Complex</option>
                   </select>
                 </div>
+
+                <button
+                  onClick={logout}
+                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                  title="Sign out / Switch Role"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>

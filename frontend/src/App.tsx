@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
+import { LoginPage } from './pages/LoginPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { CampDashboard } from './pages/CampDashboard';
 import { DistrictMapView } from './pages/DistrictMapView';
@@ -15,7 +16,12 @@ import { useAuth } from './context/AuthContext';
 import { Activity, ShieldCheck } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { role } = useAuth();
+  const { isAuthenticated, role } = useAuth();
+
+  // If not authenticated, force the Role Authentication / Login screen
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">

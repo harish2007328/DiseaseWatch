@@ -13,6 +13,8 @@ const api = axios.create({
 // Auth
 export const demoLogin = (email: string, password: string) =>
   api.post('/api/auth/demo-login', { email, password });
+export const roleSelect = (data: { role: string; camp_id?: string; name?: string }) =>
+  api.post('/api/auth/role-select', data);
 
 // Camps
 export const getCamps = () => api.get('/api/camps');

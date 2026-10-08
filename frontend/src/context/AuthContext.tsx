@@ -1,59 +1,31 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
+import { demoLogin, roleSelect } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
-  role: 'admin' | 'camp';
+  role: 'admin' | 'camp' | null;
   activeCampId: string | null;
-  setUser: (user: User | null) => void;
+  isAuthenticated: boolean;
+  loginWithRole: (role: 'admin' | 'camp', campId?: string, name?: string) => Promise<void>;
+  loginWithCredentials: (email: string, password: string) => Promise<void>;
   switchRole: (role: 'admin' | 'camp', campId?: string) => void;
   logout: () => void;
 }
 
-const DEFAULT_USERS: Record<string, User> = {
-  admin: {
-    id: 'u-admin-1',
-    email: 'admin@districthealth.gov.in',
-    name: 'Dr. Priya Sharma (District Health Officer)',
-    role: 'admin',
-    camp_id: null,
-  },
-  'camp-1': {
-    id: 'u-camp-1',
-    email: 'coord1@reliefcamp.org',
-    name: 'Rajesh Kumar (Camp Alpha - Govt High School)',
-    role: 'camp',
-    camp_id: 'camp-1',
-  },
-  'camp-2': {
-    id: 'u-camp-2',
-    email: 'coord2@reliefcamp.org',
-    name: 'Sunita Devi (Camp Beta - Community Hall)',
-    role: 'camp',
-    camp_id: 'camp-2',
-  },
-  'camp-3': {
-    id: 'u-camp-3',
-    email: 'coord3@reliefcamp.org',
-    name: 'Amit Patel (Camp Gamma - Sports Complex)',
-    role: 'camp',
-    camp_id: 'camp-3',
-  },
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>(() => {
+  const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('diseasewatch_user');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch {
-        // fallback
+        return null;
       }
     }
-    return DEFAULT_USERS['admin'];
+    return null; // Start unauthenticated so user is prompted to select their role!
   });
 
   useEffect(() => {
@@ -64,32 +36,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const switchRole = (newRole: 'admin' | 'camp', campId?: string) => {
-    if (newRole === 'admin') {
-      setUser(DEFAULT_USERS['admin']);
-    } else {
-      const selectedCampId = campId || 'camp-1';
-      setUser(DEFAULT_USERS[selectedCampId] || {
-        id: `u-${selectedCampId}`,
-        email: `coordinator@${selectedCampId}.org`,
-        name: `Camp Coordinator (${selectedCampId})`,
-        role: 'camp',
-        camp_id: selectedCampId,
-      });
+  const loginWithRole = async (role: 'admin' | 'camp', campId?: string, name?: string) => {
+    try {
+      const res = await roleSelect({ role, camp_id: campId, name });
+      setUser(res.data.user);
+    } catch (err) {
+      // Fallback local if backend is offline
+      if (role === 'admin') {
+        setUser({
+          id: 'u-admin-1',
+          email: 'admin@districthealth.gov.in',
+          name: name || 'Dr. Priya Sharma (District Health Officer)',
+          role: 'admin',
+          camp_id: null,
+        });
+      } else {
+        const cId = campId || 'camp-1';
+        setUser({
+          id: `u-${cId}`,
+          email: `coordinator@${cId}.org`,
+          name: name || `Camp Coordinator (${cId})`,
+          role: 'camp',
+          camp_id: cId,
+        });
+      }
     }
   };
 
+  const loginWithCredentials = async (email: string, password: string) => {
+    const res = await demoLogin(email, password);
+    setUser(res.data.user);
+  };
+
+  const switchRole = (newRole: 'admin' | 'camp', campId?: string) => {
+    loginWithRole(newRole, campId);
+  };
+
   const logout = () => {
-    setUser(DEFAULT_USERS['admin']);
+    setUser(null);
+    localStorage.removeItem('diseasewatch_user');
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        role: user ? user.role : 'admin',
+        role: user ? user.role : null,
         activeCampId: user ? user.camp_id : null,
-        setUser,
+        isAuthenticated: !!user,
+        loginWithRole,
+        loginWithCredentials,
         switchRole,
         logout,
       }}
