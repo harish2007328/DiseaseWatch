@@ -181,6 +181,24 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             )}
           </div>
 
+          {/* Camp Station Quick Selector */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-[#E5E7EB] bg-[#F7F8FA]">
+            <Tent className="w-3.5 h-3.5 text-[#0066CC]" />
+            <span className="text-[11px] text-[#6B7280]">Station:</span>
+            <select
+              value={activeCampId || 'camp-1'}
+              onChange={(e) => switchRole('camp', e.target.value)}
+              className="bg-transparent text-[12px] font-semibold text-[#111111] focus:outline-none cursor-pointer"
+              title="Select active relief camp station"
+            >
+              {camps.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Role Indicator & Switcher */}
           <div className="relative">
             <button

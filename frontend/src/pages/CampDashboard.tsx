@@ -7,19 +7,24 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getCamp, getActions, getHealthReports, updateAction } from '../services/api';
-import { CampDetail, Action, HealthReport } from '../types';
+import { getCamp, getCamps, getActions, getHealthReports, updateAction } from '../services/api';
+import { CampDetail, Camp, Action, HealthReport } from '../types';
 import { RiskBadge } from '../components/RiskBadge';
 import { NavLink } from 'react-router-dom';
 
 export const CampDashboard: React.FC = () => {
-  const { activeCampId } = useAuth();
+  const { activeCampId, switchRole } = useAuth();
   const campId = activeCampId || 'camp-1';
 
+  const [allCamps, setAllCamps] = useState<Camp[]>([]);
   const [camp, setCamp] = useState<CampDetail | null>(null);
   const [actions, setActions] = useState<Action[]>([]);
   const [reports, setReports] = useState<HealthReport[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getCamps().then((res) => setAllCamps(res.data || [])).catch(() => {});
+  }, []);
 
   const loadCampData = async () => {
     setLoading(true);
@@ -68,9 +73,25 @@ export const CampDashboard: React.FC = () => {
             </h1>
             {camp && <RiskBadge level={camp.risk_level} size="sm" />}
           </div>
-          <p className="text-[13px] text-[#6B7280] mt-0.5">
-            Tirunelveli District · {camp?.ward || 'Ward 4'} Station
-          </p>
+          <div className="flex items-center gap-2 text-[13px] text-[#6B7280] mt-1">
+            <span>Tirunelveli District · {camp?.ward || 'Ward 4'}</span>
+            <span>·</span>
+            {/* Quick Camp Selector */}
+            <div className="inline-flex items-center gap-1.5">
+              <span className="text-[12px] font-medium text-[#111111]">Switch Station:</span>
+              <select
+                value={campId}
+                onChange={(e) => switchRole('camp', e.target.value)}
+                className="px-2 py-0.5 text-[12px] font-semibold bg-[#F7F8FA] border border-[#E5E7EB] rounded-[5px] text-[#0066CC] focus:border-[#0066CC] cursor-pointer"
+              >
+                {allCamps.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Primary Action Buttons */}

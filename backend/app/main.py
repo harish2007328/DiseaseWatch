@@ -15,14 +15,23 @@ from app.api import auth, camps, reports, analysis, alerts, actions, dashboard
 
 import asyncio
 from app.services.keep_alive import start_keep_alive
+from app.services.seed_supabase import seed_supabase_data
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize ML model and keep-alive worker on startup."""
+    """Initialize ML model, sync database, and keep-alive worker on startup."""
     print("DiseaseWatch Backend starting...")
     print("Training ML model...")
     get_model()
     print("ML model ready.")
+    
+    # Try seeding Supabase if tables are empty
+    try:
+        seed_res = seed_supabase_data()
+        print(f"Supabase seed status: {seed_res}")
+    except Exception as e:
+        print(f"Supabase seed note: {e}")
+
     # Launch keep-alive background worker for Render 24/7 uptime
     keep_alive_task = asyncio.create_task(start_keep_alive(interval_seconds=600))
     yield

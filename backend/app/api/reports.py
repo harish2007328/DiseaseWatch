@@ -57,6 +57,23 @@ async def create_health_report(report: HealthReportCreate):
     }
 
     created = demo_store.add_health_report(report_data)
+    
+    # Also sync to Supabase
+    try:
+        from app.services.supabase_client import get_supabase
+        client = get_supabase()
+        if client:
+            client.table("health_reports").insert({
+                "symptoms": report.symptoms.model_dump(),
+                "case_count": report.case_count,
+                "affected_people": report.affected_people,
+                "severity": report.severity.value,
+                "notes": report.notes,
+                "verification_status": "pending",
+            }).execute()
+    except Exception as e:
+        print("Supabase health report sync note:", e)
+
     return {**created, "camp_name": camp["name"]}
 
 
@@ -76,6 +93,22 @@ async def create_environmental_report(report: EnvironmentalReportCreate):
     }
 
     created = demo_store.add_environmental_report(report_data)
+
+    # Also sync to Supabase
+    try:
+        from app.services.supabase_client import get_supabase
+        client = get_supabase()
+        if client:
+            client.table("environmental_reports").insert({
+                "issue_type": report.issue_type,
+                "severity": report.severity.value,
+                "description": report.description,
+                "location": report.location,
+                "verification_status": "pending",
+            }).execute()
+    except Exception as e:
+        print("Supabase env report sync note:", e)
+
     return {**created, "camp_name": camp["name"]}
 
 
