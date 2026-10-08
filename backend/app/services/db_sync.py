@@ -116,6 +116,28 @@ def get_actions_sync(camp_id: Optional[str] = None, status: Optional[str] = None
     return result
 
 
+def _parse_deadline(val: Optional[str]) -> Optional[str]:
+    if not val:
+        return None
+    val_str = str(val).strip()
+    try:
+        datetime.fromisoformat(val_str.replace("Z", "+00:00"))
+        return val_str
+    except Exception:
+        pass
+    import re
+    match = re.search(r'(\d+)\s*(hour|hr|day)', val_str, re.IGNORECASE)
+    if match:
+        amount = int(match.group(1))
+        unit = match.group(2).lower()
+        from datetime import timedelta
+        if 'day' in unit:
+            return (datetime.utcnow() + timedelta(days=amount)).isoformat() + "Z"
+        return (datetime.utcnow() + timedelta(hours=amount)).isoformat() + "Z"
+    from datetime import timedelta
+    return (datetime.utcnow() + timedelta(hours=12)).isoformat() + "Z"
+
+
 def create_action_sync(action_data: Dict[str, Any]) -> Dict[str, Any]:
     """Insert new action into Supabase and update local demo_store."""
     # Always keep demo_store in sync
@@ -140,7 +162,9 @@ def create_action_sync(action_data: Dict[str, Any]) -> Dict[str, Any]:
                 "assigned_at": datetime.utcnow().isoformat() + "Z",
             }
             if action_data.get("deadline"):
-                db_payload["deadline"] = action_data["deadline"]
+                parsed_dl = _parse_deadline(action_data["deadline"])
+                if parsed_dl:
+                    db_payload["deadline"] = parsed_dl
 
             res = client.table("actions").insert(db_payload).execute()
             if res.data and len(res.data) > 0:
@@ -304,7 +328,7 @@ def get_env_reports_sync(camp_id: Optional[str] = None) -> List[Dict[str, Any]]:
 
 def create_env_report_sync(report_data: Dict[str, Any]) -> Dict[str, Any]:
     """Insert environmental report into Supabase and demo_store."""
-    created_in_memory = demo_store.add_env_report(report_data)
+    created_in_memory = demo_store.add_environmental_report(report_data)
 
     client = get_supabase()
     if client:

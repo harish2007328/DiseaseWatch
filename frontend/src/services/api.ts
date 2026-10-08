@@ -12,6 +12,10 @@ export const getApiBase = (): string => {
   if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
     return envUrl.trim().replace(/\/+$/, '');
   }
+  // If running in browser on cloud/Vercel (non-localhost)
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://diseasewatch.onrender.com';
+  }
   return 'http://localhost:8000';
 };
 
