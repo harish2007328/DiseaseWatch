@@ -82,10 +82,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       : [
           { label: 'Dashboard', path: '/', icon: LayoutDashboard },
           { label: 'District Map', path: '/map', icon: MapIcon },
-          { label: 'Health Reports', path: '/report', icon: FileText },
-          { label: 'Environmental', path: '/environmental', icon: Droplets },
-          { label: 'Verification', path: '/verification', icon: CheckCircle2 },
-          { label: 'Alerts & Actions', path: '/alerts-actions', icon: AlertTriangle },
+          { label: 'Verification Queue', path: '/verification', icon: CheckCircle2 },
+          { label: 'Alerts & Directives', path: '/alerts-actions', icon: AlertTriangle },
           { label: 'Outbreak Clusters', path: '/clusters', icon: Layers },
           { label: 'ML Risk Sandbox', path: '/ml-sandbox', icon: Sliders },
         ];
