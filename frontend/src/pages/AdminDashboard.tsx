@@ -231,28 +231,6 @@ export const AdminDashboard: React.FC = () => {
                 height="100%"
               />
             </div>
-
-            {/* Bottom Station Status Strip (Shrink-0) */}
-            {selectedCamp && (
-              <div className="shrink-0 mt-2 pt-2 border-t border-[#E5E7EB] flex items-center justify-between text-[11px] text-[#6B7280]">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-[#111111]">{selectedCamp.name}</span>
-                  <RiskBadge level={selectedCamp.risk_level} size="sm" />
-                  <span>·</span>
-                  <span>{selectedCamp.population?.toLocaleString() || '1,000'} sheltered</span>
-                </div>
-                <div className="text-[11px]">
-                  <span>Active Cases: </span>
-                  <strong
-                    className={
-                      selectedCamp.active_cases > 0 ? 'text-[#DC2626]' : 'text-[#111111]'
-                    }
-                  >
-                    {selectedCamp.active_cases || 0}
-                  </strong>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
