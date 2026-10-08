@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { Camp, Cluster } from '../types';
 import { RiskBadge } from './RiskBadge';
-import { Layers, Eye, Users, AlertTriangle } from 'lucide-react';
+import { Layers } from 'lucide-react';
 
 const TIRUNELVELI_CENTER: [number, number] = [8.7139, 77.7567];
 
-// Authentic administrative polygon boundary for Tirunelveli District
+// Authentic administrative polygon coordinates for Tirunelveli District (Tamil Nadu)
 const TIRUNELVELI_DISTRICT_BORDER: [number, number][] = [
   [9.020, 77.620],
   [9.055, 77.710],
@@ -32,7 +33,17 @@ const TIRUNELVELI_DISTRICT_BORDER: [number, number][] = [
   [9.020, 77.620],
 ];
 
-// Actual Tirunelveli administrative zones / wards
+// Outer bounding polygon covering all surrounding areas to create a "Donut Hole / Spotlight Mask"
+// Everything outside Tirunelveli District will be covered by this faded overlay
+const SURROUNDING_MASK_OUTER: [number, number][] = [
+  [16.0, 70.0],
+  [16.0, 85.0],
+  [2.0, 85.0],
+  [2.0, 70.0],
+  [16.0, 70.0],
+];
+
+// Tirunelveli administrative zones / wards
 const ADMINISTRATIVE_WARDS = [
   {
     name: 'Palayamkottai Ward (Ward 04)',
@@ -81,7 +92,7 @@ const ADMINISTRATIVE_WARDS = [
   },
 ];
 
-// Minimal Apple-style marker
+// Apple minimalist camp marker
 const createCleanMarker = (riskLevel: string, cases: number) => {
   const norm = (riskLevel || 'low').toLowerCase();
   const colors: Record<string, { bg: string; text: string }> = {
@@ -93,7 +104,7 @@ const createCleanMarker = (riskLevel: string, cases: number) => {
   const c = colors[norm] || colors.low;
 
   const html = `
-    <div style="width: 22px; height: 22px; border-radius: 5px; background: ${c.bg}; border: 1.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; color: ${c.text}; font-size: 10px; font-weight: 600; font-family: -apple-system, sans-serif;">
+    <div style="width: 24px; height: 24px; border-radius: 6px; background: ${c.bg}; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; color: ${c.text}; font-size: 10px; font-weight: 700; font-family: -apple-system, sans-serif;">
       ${cases > 99 ? '99+' : cases}
     </div>
   `;
@@ -101,16 +112,22 @@ const createCleanMarker = (riskLevel: string, cases: number) => {
   return L.divIcon({
     className: 'clean-camp-pin',
     html,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
-    popupAnchor: [0, -12],
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -14],
   });
 };
 
-function MapViewRecenter({ center, zoom }: { center: [number, number]; zoom: number }) {
+// Component to handle map sizing & recentering reliably
+function MapInitHelper({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => {
     map.setView(center, zoom);
+    // Invalidate size after mount to prevent grey/blank map bug
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+    return () => clearTimeout(timer);
   }, [center, zoom, map]);
   return null;
 }
@@ -130,14 +147,11 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
   onSelectCamp,
   height = '500px',
 }) => {
-  // Layer toggles
   const [layers, setLayers] = useState({
     camps: true,
-    healthIncidents: true,
-    environmental: true,
-    riskAreas: true,
-    clusters: true,
     boundaries: true,
+    wards: true,
+    fadedMask: true,
   });
 
   const [selectedWard, setSelectedWard] = useState<typeof ADMINISTRATIVE_WARDS[0] | null>(null);
@@ -149,12 +163,12 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
       <div className="absolute top-3 left-3 z-[400] flex items-center gap-2">
         <div className="bg-[#FFFFFF] px-3 py-1.5 rounded-[7px] border border-[#E5E7EB] text-[12px] text-[#111111] flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#0066CC]"></span>
-          <span className="font-medium">Tirunelveli District</span>
-          <span className="text-[#6B7280]">· Live GIS</span>
+          <span className="font-semibold text-[#111111]">Tirunelveli District</span>
+          <span className="text-[#6B7280]">· Highlighted Zone</span>
         </div>
       </div>
 
-      {/* Top Right: Clean Minimal Layer Control */}
+      {/* Top Right: Layer Control */}
       <div className="absolute top-3 right-3 z-[400]">
         <button
           onClick={() => setShowLayerMenu(!showLayerMenu)}
@@ -167,57 +181,17 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
         {showLayerMenu && (
           <div className="mt-1.5 w-52 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] p-2.5 space-y-2 z-[400]">
             <div className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider pb-1 border-b border-[#E5E7EB]">
-              Map Overlays
+              Map Visibility
             </div>
 
             <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
               <input
                 type="checkbox"
-                checked={layers.camps}
-                onChange={(e) => setLayers({ ...layers, camps: e.target.checked })}
+                checked={layers.fadedMask}
+                onChange={(e) => setLayers({ ...layers, fadedMask: e.target.checked })}
                 className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
               />
-              <span>Camps</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers.healthIncidents}
-                onChange={(e) => setLayers({ ...layers, healthIncidents: e.target.checked })}
-                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
-              />
-              <span>Health incidents</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers.environmental}
-                onChange={(e) => setLayers({ ...layers, environmental: e.target.checked })}
-                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
-              />
-              <span>Environmental incidents</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers.riskAreas}
-                onChange={(e) => setLayers({ ...layers, riskAreas: e.target.checked })}
-                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
-              />
-              <span>Risk areas</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers.clusters}
-                onChange={(e) => setLayers({ ...layers, clusters: e.target.checked })}
-                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
-              />
-              <span>Clusters</span>
+              <span>Fade Outside Districts</span>
             </label>
 
             <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
@@ -227,20 +201,40 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
                 onChange={(e) => setLayers({ ...layers, boundaries: e.target.checked })}
                 className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
               />
-              <span>Administrative boundaries</span>
+              <span>Tirunelveli Boundary</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layers.wards}
+                onChange={(e) => setLayers({ ...layers, wards: e.target.checked })}
+                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
+              />
+              <span>Administrative Wards</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layers.camps}
+                onChange={(e) => setLayers({ ...layers, camps: e.target.checked })}
+                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
+              />
+              <span>Relief Camp Markers</span>
             </label>
           </div>
         )}
       </div>
 
-      {/* Selected Ward Card (Clicking a ward shows its stats) */}
+      {/* Selected Ward Card */}
       {selectedWard && (
         <div className="absolute bottom-3 left-3 z-[400] max-w-xs bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] p-3 text-[12px]">
           <div className="flex items-center justify-between pb-1 mb-2 border-b border-[#E5E7EB]">
             <span className="font-semibold text-[#111111]">{selectedWard.name}</span>
             <button
               onClick={() => setSelectedWard(null)}
-              className="text-[#6B7280] hover:text-[#111111] text-[11px]"
+              className="text-[#6B7280] hover:text-[#111111] text-[11px] cursor-pointer"
             >
               ✕
             </button>
@@ -258,12 +252,8 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
               <span>Active cases:</span>
               <strong className="text-[#111111]">{selectedWard.activeCases}</strong>
             </div>
-            <div className="flex justify-between">
-              <span>High-risk camps:</span>
-              <strong className="text-[#DC2626]">{selectedWard.highRiskCamps}</strong>
-            </div>
             <div className="flex justify-between items-center pt-1 border-t border-[#E5E7EB]">
-              <span>Risk Level:</span>
+              <span>Status:</span>
               <RiskBadge level={selectedWard.riskLevel} size="sm" />
             </div>
           </div>
@@ -277,45 +267,56 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
         scrollWheelZoom={false}
         className="h-full w-full"
       >
-        <MapViewRecenter center={TIRUNELVELI_CENTER} zoom={11} />
+        <MapInitHelper center={TIRUNELVELI_CENTER} zoom={11} />
 
-        {/* Clean CartoDB Voyager Tile Layer */}
+        {/* Standard, Highly-Reliable OpenStreetMap Tile Layer */}
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          subdomains="abcd"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
         />
 
-        {/* Real District Boundary */}
+        {/* Inverse Spotlight Mask: Fades out all surrounding regions while keeping Tirunelveli clear */}
+        {layers.fadedMask && (
+          <Polygon
+            positions={[SURROUNDING_MASK_OUTER, TIRUNELVELI_DISTRICT_BORDER]}
+            pathOptions={{
+              stroke: false,
+              fillColor: '#FFFFFF',
+              fillOpacity: 0.62,
+              interactive: false,
+            }}
+          />
+        )}
+
+        {/* Distinctive Tirunelveli District Boundary Line */}
         {layers.boundaries && (
           <Polygon
             positions={TIRUNELVELI_DISTRICT_BORDER}
             pathOptions={{
               color: '#0066CC',
-              weight: 1.5,
-              dashArray: '4, 4',
+              weight: 2.5,
               fillColor: '#0066CC',
-              fillOpacity: 0.03,
+              fillOpacity: 0.05,
             }}
           >
             <Tooltip sticky direction="top">
-              <span className="text-[11px] font-medium text-[#111111]">Tirunelveli District Boundary</span>
+              <span className="text-[12px] font-semibold text-[#0066CC]">Tirunelveli District</span>
             </Tooltip>
           </Polygon>
         )}
 
-        {/* Administrative Wards Polygons */}
-        {layers.boundaries &&
+        {/* Administrative Wards Polygons inside Tirunelveli */}
+        {layers.wards &&
           ADMINISTRATIVE_WARDS.map((ward) => (
             <Polygon
               key={ward.name}
               positions={ward.polygon}
               pathOptions={{
                 color: ward.riskLevel === 'HIGH' ? '#DC2626' : '#0066CC',
-                weight: 1,
+                weight: 1.5,
                 fillColor: ward.riskLevel === 'HIGH' ? '#DC2626' : '#0066CC',
-                fillOpacity: 0.06,
+                fillOpacity: 0.08,
               }}
               eventHandlers={{
                 click: () => setSelectedWard(ward),
@@ -347,26 +348,22 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
 
                   <div className="space-y-1 text-[#4B5563] pt-1 border-t border-[#E5E7EB]">
                     <div className="flex justify-between">
-                      <span>Population</span>
+                      <span>Population:</span>
                       <strong className="text-[#111111]">{camp.population}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span>Active cases</span>
+                      <span>Active cases:</span>
                       <strong className="text-[#111111]">{camp.active_cases || 0}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span>Top condition</span>
+                      <span>Top condition:</span>
                       <span className="text-[#111111] truncate max-w-[110px]">
                         {camp.top_syndrome || 'Gastrointestinal'}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Environmental</span>
-                      <span className="text-[#111111]">Water contamination</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Last report</span>
-                      <span className="text-[#6B7280]">12 min ago</span>
+                      <span>Environmental:</span>
+                      <span className="text-[#111111]">Water issue</span>
                     </div>
                   </div>
 
