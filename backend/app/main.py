@@ -80,4 +80,16 @@ async def root():
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy"}
+    from app.services.supabase_client import get_supabase
+    client = get_supabase()
+    db_ok = False
+    if client:
+        try:
+            client.table("camps").select("id").limit(1).execute()
+            db_ok = True
+        except Exception:
+            pass
+    return {
+        "status": "healthy",
+        "database": "connected" if db_ok else "in-memory-fallback"
+    }
