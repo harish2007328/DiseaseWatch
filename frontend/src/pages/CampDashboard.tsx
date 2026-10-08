@@ -14,25 +14,26 @@ import { NavLink } from 'react-router-dom';
 
 export const CampDashboard: React.FC = () => {
   const { activeCampId, switchRole } = useAuth();
-  const campId = activeCampId || 'camp-1';
-
   const [allCamps, setAllCamps] = useState<Camp[]>([]);
   const [camp, setCamp] = useState<CampDetail | null>(null);
   const [actions, setActions] = useState<Action[]>([]);
   const [reports, setReports] = useState<HealthReport[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const effectiveCampId = activeCampId || (allCamps.length > 0 ? allCamps[0].id : '');
+
   useEffect(() => {
     getCamps().then((res) => setAllCamps(res.data || [])).catch(() => {});
   }, []);
 
   const loadCampData = async () => {
+    if (!effectiveCampId) return;
     setLoading(true);
     try {
       const [campRes, actRes, repRes] = await Promise.all([
-        getCamp(campId),
-        getActions(campId),
-        getHealthReports(campId),
+        getCamp(effectiveCampId),
+        getActions(effectiveCampId),
+        getHealthReports(effectiveCampId),
       ]);
       setCamp(campRes.data);
       setActions(actRes.data || []);
@@ -46,7 +47,7 @@ export const CampDashboard: React.FC = () => {
 
   useEffect(() => {
     loadCampData();
-  }, [campId]);
+  }, [effectiveCampId]);
 
   const handleStatusChange = async (actionId: string, currentStatus: string) => {
     const nextStatus = currentStatus === 'pending' ? 'in_progress' : 'completed';
@@ -80,7 +81,7 @@ export const CampDashboard: React.FC = () => {
             <div className="inline-flex items-center gap-1.5">
               <span className="text-[12px] font-medium text-[#111111]">Switch Station:</span>
               <select
-                value={campId}
+                value={effectiveCampId}
                 onChange={(e) => switchRole('camp', e.target.value)}
                 className="px-2 py-0.5 text-[12px] font-semibold bg-[#F7F8FA] border border-[#E5E7EB] rounded-[5px] text-[#0066CC] focus:border-[#0066CC] cursor-pointer"
               >

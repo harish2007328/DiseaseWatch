@@ -201,8 +201,9 @@ async def detect_clusters():
     Detect geographic clusters of similar health conditions
     across nearby camps.
     """
+    from app.services.db_sync import get_camps_sync
     model = get_model()
-    camps_data = demo_store.get_all_camps_enriched()
+    camps_data = get_camps_sync()
     clusters = model.detect_clusters(camps_data)
 
     return ClusterResponse(

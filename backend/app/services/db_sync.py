@@ -5,7 +5,7 @@ with seamless fallback to demo_store when offline.
 """
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from app.services.supabase_client import get_supabase
 from app.services.demo_data import demo_store
@@ -84,23 +84,22 @@ def get_actions_sync(camp_id: Optional[str] = None, status: Optional[str] = None
 
             res = query.order("assigned_at", desc=True).execute()
             data = res.data or []
-            if data:
-                formatted = []
-                for row in data:
-                    c_name = "Unknown"
-                    if isinstance(row.get("camps"), dict):
-                        c_name = row["camps"].get("name", "Unknown")
-                    elif isinstance(row.get("camps"), list) and row["camps"]:
-                        c_name = row["camps"][0].get("name", "Unknown")
-                    
-                    item = {**row, "camp_name": c_name}
-                    item.pop("camps", None)
-                    formatted.append(item)
-                return formatted
+            formatted = []
+            for row in data:
+                c_name = "Unknown"
+                if isinstance(row.get("camps"), dict):
+                    c_name = row["camps"].get("name", "Unknown")
+                elif isinstance(row.get("camps"), list) and row["camps"]:
+                    c_name = row["camps"][0].get("name", "Unknown")
+                
+                item = {**row, "camp_name": c_name}
+                item.pop("camps", None)
+                formatted.append(item)
+            return formatted
         except Exception as e:
             logger.error(f"Error fetching actions from Supabase: {e}")
 
-    # Fallback to demo_store
+    # Fallback to demo_store only if Supabase call failed
     if camp_id:
         actions = demo_store.get_camp_actions(camp_id)
     else:
@@ -211,23 +210,22 @@ def get_health_reports_sync(camp_id: Optional[str] = None) -> List[Dict[str, Any
 
             res = query.order("reported_at", desc=True).execute()
             data = res.data or []
-            if data:
-                formatted = []
-                for row in data:
-                    c_name = "Unknown"
-                    if isinstance(row.get("camps"), dict):
-                        c_name = row["camps"].get("name", "Unknown")
-                    elif isinstance(row.get("camps"), list) and row["camps"]:
-                        c_name = row["camps"][0].get("name", "Unknown")
-                    
-                    item = {**row, "camp_name": c_name}
-                    item.pop("camps", None)
-                    formatted.append(item)
-                return formatted
+            formatted = []
+            for row in data:
+                c_name = "Unknown"
+                if isinstance(row.get("camps"), dict):
+                    c_name = row["camps"].get("name", "Unknown")
+                elif isinstance(row.get("camps"), list) and row["camps"]:
+                    c_name = row["camps"][0].get("name", "Unknown")
+                
+                item = {**row, "camp_name": c_name}
+                item.pop("camps", None)
+                formatted.append(item)
+            return formatted
         except Exception as e:
             logger.error(f"Error fetching health reports from Supabase: {e}")
 
-    # Fallback to demo_store
+    # Fallback to demo_store only if Supabase call failed
     reports = demo_store.get_camp_health_reports(camp_id) if camp_id else demo_store.health_reports
     result = []
     for r in sorted(reports, key=lambda x: x.get("reported_at", ""), reverse=True):
@@ -302,19 +300,18 @@ def get_env_reports_sync(camp_id: Optional[str] = None) -> List[Dict[str, Any]]:
 
             res = query.order("reported_at", desc=True).execute()
             data = res.data or []
-            if data:
-                formatted = []
-                for row in data:
-                    c_name = "Unknown"
-                    if isinstance(row.get("camps"), dict):
-                        c_name = row["camps"].get("name", "Unknown")
-                    elif isinstance(row.get("camps"), list) and row["camps"]:
-                        c_name = row["camps"][0].get("name", "Unknown")
-                    
-                    item = {**row, "camp_name": c_name}
-                    item.pop("camps", None)
-                    formatted.append(item)
-                return formatted
+            formatted = []
+            for row in data:
+                c_name = "Unknown"
+                if isinstance(row.get("camps"), dict):
+                    c_name = row["camps"].get("name", "Unknown")
+                elif isinstance(row.get("camps"), list) and row["camps"]:
+                    c_name = row["camps"][0].get("name", "Unknown")
+                
+                item = {**row, "camp_name": c_name}
+                item.pop("camps", None)
+                formatted.append(item)
+            return formatted
         except Exception as e:
             logger.error(f"Error fetching environmental reports from Supabase: {e}")
 
@@ -393,19 +390,18 @@ def get_alerts_sync(camp_id: Optional[str] = None, status: Optional[str] = None)
 
             res = query.order("created_at", desc=True).execute()
             data = res.data or []
-            if data:
-                formatted = []
-                for row in data:
-                    c_name = "Unknown"
-                    if isinstance(row.get("camps"), dict):
-                        c_name = row["camps"].get("name", "Unknown")
-                    elif isinstance(row.get("camps"), list) and row["camps"]:
-                        c_name = row["camps"][0].get("name", "Unknown")
-                    
-                    item = {**row, "camp_name": c_name}
-                    item.pop("camps", None)
-                    formatted.append(item)
-                return formatted
+            formatted = []
+            for row in data:
+                c_name = "Unknown"
+                if isinstance(row.get("camps"), dict):
+                    c_name = row["camps"].get("name", "Unknown")
+                elif isinstance(row.get("camps"), list) and row["camps"]:
+                    c_name = row["camps"][0].get("name", "Unknown")
+                
+                item = {**row, "camp_name": c_name}
+                item.pop("camps", None)
+                formatted.append(item)
+            return formatted
         except Exception as e:
             logger.error(f"Error fetching alerts from Supabase: {e}")
 
@@ -494,3 +490,59 @@ def get_camps_sync() -> List[Dict[str, Any]]:
             logger.error(f"Error fetching camps from Supabase: {e}")
 
     return demo_store.get_all_camps_enriched()
+
+
+def get_dashboard_summary_sync() -> Dict[str, Any]:
+    """Retrieve aggregate KPI summary directly from Supabase."""
+    client = get_supabase()
+    if client:
+        try:
+            camps = get_camps_sync()
+            h_reports = get_health_reports_sync()
+            alerts = get_alerts_sync()
+            actions = get_actions_sync()
+
+            total_affected = sum(int(r.get("affected_people", 0)) for r in h_reports)
+            active_alerts = [a for a in alerts if a.get("status") not in ("resolved",)]
+            pending_actions = [a for a in actions if a.get("status") == "pending"]
+            high_risk = [c for c in camps if c.get("risk_level") in ("high", "critical")]
+            critical_camps = [c for c in camps if c.get("risk_level") == "critical"]
+            pending_reports = [r for r in h_reports if r.get("verification_status") == "pending"]
+            verified_reports = [r for r in h_reports if r.get("verification_status") == "verified"]
+
+            # Disease trends past 14 days
+            today = datetime.utcnow().date()
+            disease_trends = []
+            for d in range(14):
+                day_str = (today - timedelta(days=13 - d)).isoformat()
+                day_cases = sum(
+                    int(r.get("case_count", 0)) for r in h_reports
+                    if str(r.get("reported_at", ""))[:10] == day_str
+                )
+                disease_trends.append({"date": day_str, "cases": day_cases})
+
+            risk_distribution = {"low": 0, "medium": 0, "high": 0, "critical": 0}
+            for c in camps:
+                rl = c.get("risk_level", "low")
+                if rl in risk_distribution:
+                    risk_distribution[rl] += 1
+
+            return {
+                "total_camps": len(camps),
+                "total_reports": len(h_reports),
+                "active_alerts": len(active_alerts),
+                "high_risk_camps": len(high_risk),
+                "total_affected": total_affected,
+                "pending_actions": len(pending_actions),
+                "critical_camps": len(critical_camps),
+                "verified_reports": len(verified_reports),
+                "pending_reports": len(pending_reports),
+                "recent_alerts": alerts[:5],
+                "recent_reports": h_reports[:5],
+                "disease_trends": disease_trends,
+                "risk_distribution": risk_distribution,
+            }
+        except Exception as e:
+            logger.error(f"Error computing dashboard summary from Supabase: {e}")
+
+    return demo_store.get_dashboard_summary()

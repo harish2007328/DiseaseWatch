@@ -47,12 +47,15 @@ export const SubmitHealthReport: React.FC = () => {
 
   useEffect(() => {
     getCamps().then((res) => {
-      setCamps(res.data || []);
-      if (!selectedCampId && res.data.length > 0) {
-        setSelectedCampId(res.data[0].id);
+      const campList = res.data || [];
+      setCamps(campList);
+      if (activeCampId) {
+        setSelectedCampId(activeCampId);
+      } else if (campList.length > 0) {
+        setSelectedCampId(campList[0].id);
       }
     });
-  }, []);
+  }, [activeCampId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -144,17 +147,26 @@ export const SubmitHealthReport: React.FC = () => {
             <label className="block text-[12px] font-medium text-[#111111] mb-1.5">
               Reporting Camp Station
             </label>
-            <select
-              value={selectedCampId}
-              onChange={(e) => setSelectedCampId(e.target.value)}
-              className="w-full px-3 py-2 text-[13px] bg-[#FFFFFF] border border-[#E5E7EB] rounded-[7px] text-[#111111] focus:border-[#0066CC]"
-            >
-              {camps.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} — ({c.ward || 'Tirunelveli'})
-                </option>
-              ))}
-            </select>
+            {role === 'camp' ? (
+              <div className="w-full px-3 py-2 text-[13px] bg-[#F7F8FA] border border-[#E5E7EB] rounded-[7px] text-[#111111] font-medium flex items-center justify-between">
+                <span>{camps.find((c) => c.id === selectedCampId)?.name || 'Assigned Relief Camp'}</span>
+                <span className="text-[11px] font-semibold text-[#0066CC] bg-[#EAF3FF] px-2 py-0.5 rounded-[4px]">
+                  Your Assigned Station
+                </span>
+              </div>
+            ) : (
+              <select
+                value={selectedCampId}
+                onChange={(e) => setSelectedCampId(e.target.value)}
+                className="w-full px-3 py-2 text-[13px] bg-[#FFFFFF] border border-[#E5E7EB] rounded-[7px] text-[#111111] focus:border-[#0066CC]"
+              >
+                {camps.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — ({c.ward || 'Tirunelveli'})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Symptom Selection (Checkboxes / Compact Grid) */}

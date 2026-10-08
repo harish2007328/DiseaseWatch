@@ -70,16 +70,25 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   };
 
-  const navItems = [
-    { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { label: 'District Map', path: '/map', icon: MapIcon },
-    { label: 'Health Reports', path: '/report', icon: FileText },
-    { label: 'Environmental', path: '/environmental', icon: Droplets },
-    { label: 'Verification', path: '/verification', icon: CheckCircle2 },
-    { label: 'Alerts & Actions', path: '/alerts-actions', icon: AlertTriangle },
-    { label: 'Outbreak Clusters', path: '/clusters', icon: Layers },
-    { label: 'ML Risk Sandbox', path: '/ml-sandbox', icon: Sliders },
-  ];
+  const navItems =
+    role === 'camp'
+      ? [
+          { label: 'Camp Station Desk', path: '/', icon: LayoutDashboard },
+          { label: 'Tirunelveli Map', path: '/map', icon: MapIcon },
+          { label: 'Report Health Incident', path: '/report', icon: FileText },
+          { label: 'Environmental Hazard', path: '/environmental', icon: Droplets },
+          { label: 'Camp Action Tasks', path: '/alerts-actions', icon: AlertTriangle },
+        ]
+      : [
+          { label: 'Dashboard', path: '/', icon: LayoutDashboard },
+          { label: 'District Map', path: '/map', icon: MapIcon },
+          { label: 'Health Reports', path: '/report', icon: FileText },
+          { label: 'Environmental', path: '/environmental', icon: Droplets },
+          { label: 'Verification', path: '/verification', icon: CheckCircle2 },
+          { label: 'Alerts & Actions', path: '/alerts-actions', icon: AlertTriangle },
+          { label: 'Outbreak Clusters', path: '/clusters', icon: Layers },
+          { label: 'ML Risk Sandbox', path: '/ml-sandbox', icon: Sliders },
+        ];
 
   return (
     <div className="min-h-screen bg-[#F7F8FA] text-[#111111] flex flex-col font-sans">
@@ -105,7 +114,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0066CC]"></span>
             <span className="font-medium text-[#111111]">Tirunelveli District</span>
             <span>·</span>
-            <span>Surveillance Desk</span>
+            <span>{role === 'camp' ? 'Relief Camp Station' : 'Surveillance Command Desk'}</span>
           </div>
         </div>
 
@@ -305,8 +314,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         {/* Desktop Sidebar */}
         <aside className="w-56 bg-[#FFFFFF] border-r border-[#E5E7EB] shrink-0 flex flex-col justify-between py-4 px-3 hidden md:flex">
           <nav className="space-y-1">
-            <div className="px-2.5 py-1 text-[11px] font-medium text-[#6B7280] uppercase tracking-wider mb-1">
-              Surveillance Desk
+            <div className="px-2.5 py-1 text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-1">
+              {role === 'camp' ? 'Camp Operations' : 'District Surveillance'}
             </div>
 
             {navItems.map((item) => {

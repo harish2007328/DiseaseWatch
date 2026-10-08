@@ -1,5 +1,6 @@
 """Notification and Dashboard API routes."""
 from fastapi import APIRouter, HTTPException
+from app.services.db_sync import get_dashboard_summary_sync
 from app.services.demo_data import demo_store, USER_IDS
 
 router = APIRouter(tags=["Dashboard & Notifications"])
@@ -7,8 +8,8 @@ router = APIRouter(tags=["Dashboard & Notifications"])
 
 @router.get("/api/dashboard/summary")
 async def get_dashboard_summary():
-    """Get admin dashboard summary with KPIs."""
-    return demo_store.get_dashboard_summary()
+    """Get admin dashboard summary with KPIs from Supabase."""
+    return get_dashboard_summary_sync()
 
 
 @router.get("/api/notifications")

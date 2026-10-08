@@ -25,12 +25,23 @@ export const App: React.FC = () => {
       <Routes>
         <Route path="/" element={role === 'admin' ? <AdminDashboard /> : <CampDashboard />} />
         <Route path="/map" element={<DistrictMapView />} />
-        <Route path="/verification" element={<VerificationQueue />} />
-        <Route path="/alerts-actions" element={<AlertsAndActionsView />} />
-        <Route path="/clusters" element={<ClusterAnalysisView />} />
-        <Route path="/ml-sandbox" element={<MLSandbox />} />
         <Route path="/report" element={<SubmitHealthReport />} />
         <Route path="/environmental" element={<EnvironmentalHazard />} />
+        <Route path="/alerts-actions" element={<AlertsAndActionsView />} />
+        
+        {/* District Administrator Exclusive Modules */}
+        <Route
+          path="/verification"
+          element={role === 'admin' ? <VerificationQueue /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/clusters"
+          element={role === 'admin' ? <ClusterAnalysisView /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/ml-sandbox"
+          element={role === 'admin' ? <MLSandbox /> : <Navigate to="/" replace />}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>

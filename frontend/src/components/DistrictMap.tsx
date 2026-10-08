@@ -1,134 +1,117 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Camp, Cluster } from '../types';
 import { RiskBadge } from './RiskBadge';
-import { Layers } from 'lucide-react';
+import { Layers, Crosshair, ZoomIn, ZoomOut, Compass } from 'lucide-react';
+import tirunelveliBoundary from '../data/tirunelveli_boundary.json';
 
-const TIRUNELVELI_CENTER: [number, number] = [8.7139, 77.7567];
+// Authentic Geographic Centers
+const TIRUNELVELI_DISTRICT_CENTER: [number, number] = [8.550, 77.580]; // Center of entire Tirunelveli district
+const CAMPS_CLUSTER_CENTER: [number, number] = [8.724, 77.720]; // Center of Tirunelveli relief camp stations
 
-// Authentic administrative polygon coordinates for Tirunelveli District (Tamil Nadu)
-const TIRUNELVELI_DISTRICT_BORDER: [number, number][] = [
-  [9.020, 77.620],
-  [9.055, 77.710],
-  [9.080, 77.800],
-  [9.040, 77.870],
-  [8.940, 77.940],
-  [8.840, 77.980],
-  [8.730, 77.995],
-  [8.610, 77.960],
-  [8.490, 77.910],
-  [8.360, 77.870],
-  [8.250, 77.810],
-  [8.180, 77.710],
-  [8.220, 77.600],
-  [8.330, 77.520],
-  [8.440, 77.440],
-  [8.540, 77.380],
-  [8.650, 77.350],
-  [8.730, 77.400],
-  [8.810, 77.470],
-  [8.920, 77.540],
-  [9.020, 77.620],
-];
-
-// Outer bounding polygon covering all surrounding areas to create a "Donut Hole / Spotlight Mask"
-// Everything outside Tirunelveli District will be covered by this faded overlay
-const SURROUNDING_MASK_OUTER: [number, number][] = [
-  [16.0, 70.0],
-  [16.0, 85.0],
-  [2.0, 85.0],
-  [2.0, 70.0],
-  [16.0, 70.0],
-];
-
-// Tirunelveli administrative zones / wards
-const ADMINISTRATIVE_WARDS = [
-  {
-    name: 'Palayamkottai Ward (Ward 04)',
-    campsCount: 3,
-    population: 3400,
-    activeCases: 42,
-    highRiskCamps: 1,
-    riskLevel: 'HIGH',
-    polygon: [
-      [8.730, 77.730],
-      [8.745, 77.770],
-      [8.715, 77.785],
-      [8.695, 77.745],
-      [8.730, 77.730],
-    ] as [number, number][],
-  },
-  {
-    name: 'Tirunelveli Town (Ward 01)',
-    campsCount: 2,
-    population: 2800,
-    activeCases: 19,
-    highRiskCamps: 0,
-    riskLevel: 'MEDIUM',
-    polygon: [
-      [8.735, 77.680],
-      [8.755, 77.725],
-      [8.725, 77.735],
-      [8.705, 77.690],
-      [8.735, 77.680],
-    ] as [number, number][],
-  },
-  {
-    name: 'Melapalayam Sector (Ward 07)',
-    campsCount: 2,
-    population: 2100,
-    activeCases: 29,
-    highRiskCamps: 1,
-    riskLevel: 'HIGH',
-    polygon: [
-      [8.695, 77.725],
-      [8.715, 77.770],
-      [8.670, 77.765],
-      [8.665, 77.715],
-      [8.695, 77.725],
-    ] as [number, number][],
-  },
-];
-
-// Apple minimalist camp marker
-const createCleanMarker = (riskLevel: string, cases: number) => {
-  const norm = (riskLevel || 'low').toLowerCase();
-  const colors: Record<string, { bg: string; text: string }> = {
-    critical: { bg: '#991B1B', text: '#FFFFFF' },
-    high: { bg: '#DC2626', text: '#FFFFFF' },
-    medium: { bg: '#2563EB', text: '#FFFFFF' },
-    low: { bg: '#0066CC', text: '#FFFFFF' },
+// Custom SVG Pin Generator for Leaflet
+const createPinIcon = (camp: Camp, isSelected: boolean) => {
+  const norm = (camp.risk_level || 'low').toLowerCase();
+  const colors: Record<string, { bg: string; border: string; glow: string }> = {
+    critical: { bg: '#DC2626', border: '#991B1B', glow: 'rgba(220, 38, 38, 0.4)' },
+    high: { bg: '#EA580C', border: '#C2410C', glow: 'rgba(234, 88, 12, 0.35)' },
+    medium: { bg: '#D97706', border: '#B45309', glow: 'rgba(217, 119, 6, 0.3)' },
+    low: { bg: '#0066CC', border: '#004C99', glow: 'rgba(0, 102, 204, 0.3)' },
   };
   const c = colors[norm] || colors.low;
 
+  // Short label from name: e.g. "Palayamkottai", "Town", "Melapalayam"
+  let shortName = camp.ward || camp.name.split(' - ')[1] || camp.name;
+  shortName = shortName.replace(/\(.*?\)/g, '').trim();
+  if (shortName.length > 15) shortName = shortName.substring(0, 13) + '…';
+
+  const cases = camp.active_cases || 0;
+
   const html = `
-    <div style="width: 24px; height: 24px; border-radius: 6px; background: ${c.bg}; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; color: ${c.text}; font-size: 10px; font-weight: 700; font-family: -apple-system, sans-serif;">
-      ${cases > 99 ? '99+' : cases}
+    <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%);">
+      <!-- Pin Marker -->
+      <div style="
+        position: relative;
+        width: 30px;
+        height: 38px;
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.28));
+        transition: transform 0.2s ease;
+      ">
+        <svg viewBox="0 0 24 30" width="30" height="38" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 8.5 12 18 12 18s12-9.5 12-18c0-6.627-5.373-12-12-12z" fill="${c.bg}" stroke="#FFFFFF" stroke-width="2"/>
+          <circle cx="12" cy="11" r="5.5" fill="#FFFFFF"/>
+          <circle cx="12" cy="11" r="3.5" fill="${c.bg}"/>
+        </svg>
+        ${
+          isSelected
+            ? `<div style="
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                border: 2px solid #FFFFFF;
+                box-shadow: 0 0 10px 4px ${c.glow};
+                animation: pulse 1.8s infinite;
+              "></div>`
+            : ''
+        }
+      </div>
+
+      <!-- Station Name Tag -->
+      <div style="
+        margin-top: 2px;
+        background: #FFFFFF;
+        color: #111111;
+        border: 1px solid #E5E7EB;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      ">
+        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${c.bg};"></span>
+        <span>${shortName}</span>
+        ${cases > 0 ? `<span style="color: ${c.bg}; font-weight: 700;">(${cases})</span>` : ''}
+      </div>
     </div>
   `;
 
   return L.divIcon({
-    className: 'clean-camp-pin',
+    className: 'custom-camp-pin',
     html,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -14],
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    popupAnchor: [0, -42],
   });
 };
 
-// Component to handle map sizing & recentering reliably
-function MapInitHelper({ center, zoom }: { center: [number, number]; zoom: number }) {
+// Map controller component for smooth transitions
+function MapViewController({
+  targetCenter,
+  targetZoom,
+}: {
+  targetCenter: [number, number];
+  targetZoom: number;
+}) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, zoom);
-    // Invalidate size after mount to prevent grey/blank map bug
+    map.flyTo(targetCenter, targetZoom, { duration: 1.0 });
+    // Invalidate size to ensure crisp rendering
     const timer = setTimeout(() => {
       map.invalidateSize();
-    }, 250);
+    }, 200);
     return () => clearTimeout(timer);
-  }, [center, zoom, map]);
+  }, [targetCenter, targetZoom, map]);
+
   return null;
 }
 
@@ -138,6 +121,7 @@ interface DistrictMapProps {
   selectedCampId?: string | null;
   onSelectCamp?: (camp: Camp) => void;
   height?: string;
+  defaultViewMode?: 'camps' | 'district';
 }
 
 export const DistrictMap: React.FC<DistrictMapProps> = ({
@@ -145,241 +129,191 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
   clusters = [],
   selectedCampId,
   onSelectCamp,
-  height = '500px',
+  height = '520px',
+  defaultViewMode = 'camps',
 }) => {
-  const [layers, setLayers] = useState({
-    camps: true,
-    boundaries: true,
-    wards: true,
-    fadedMask: true,
-  });
+  const [viewMode, setViewMode] = useState<'camps' | 'district'>(defaultViewMode);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(
+    defaultViewMode === 'camps' ? CAMPS_CLUSTER_CENTER : TIRUNELVELI_DISTRICT_CENTER
+  );
+  const [mapZoom, setMapZoom] = useState<number>(defaultViewMode === 'camps' ? 13 : 10);
+  const [showBoundary, setShowBoundary] = useState(true);
 
-  const [selectedWard, setSelectedWard] = useState<typeof ADMINISTRATIVE_WARDS[0] | null>(null);
-  const [showLayerMenu, setShowLayerMenu] = useState(false);
+  // When selectedCampId changes, automatically focus on it
+  useEffect(() => {
+    if (selectedCampId) {
+      const targetCamp = camps.find((c) => c.id === selectedCampId);
+      if (targetCamp) {
+        setMapCenter([targetCamp.location_lat, targetCamp.location_lng]);
+        setMapZoom(14);
+        setViewMode('camps');
+      }
+    }
+  }, [selectedCampId, camps]);
+
+  const handleFocusCamps = () => {
+    setViewMode('camps');
+    setMapCenter(CAMPS_CLUSTER_CENTER);
+    setMapZoom(13);
+  };
+
+  const handleFocusDistrict = () => {
+    setViewMode('district');
+    setMapCenter(TIRUNELVELI_DISTRICT_CENTER);
+    setMapZoom(10);
+  };
 
   return (
-    <div className="relative w-full rounded-[8px] overflow-hidden border border-[#E5E7EB] bg-[#FFFFFF]" style={{ height }}>
-      {/* Top Left: District Title Badge */}
+    <div className="relative w-full rounded-[8px] overflow-hidden border border-[#E5E7EB] bg-[#F7F8FA]" style={{ height }}>
+      {/* Top Left: District & Relief Badge */}
       <div className="absolute top-3 left-3 z-[400] flex items-center gap-2">
-        <div className="bg-[#FFFFFF] px-3 py-1.5 rounded-[7px] border border-[#E5E7EB] text-[12px] text-[#111111] flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#0066CC]"></span>
+        <div className="bg-[#FFFFFF] px-3 py-1.5 rounded-[7px] border border-[#E5E7EB] text-[12px] text-[#111111] shadow-sm flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0066CC]"></span>
           <span className="font-semibold text-[#111111]">Tirunelveli District</span>
-          <span className="text-[#6B7280]">· Highlighted Zone</span>
+          <span className="text-[#6B7280]">·</span>
+          <span className="text-[#4B5563] font-medium">
+            {camps.length} Active Relief Stations
+          </span>
         </div>
       </div>
 
-      {/* Top Right: Layer Control */}
-      <div className="absolute top-3 right-3 z-[400]">
+      {/* Top Right: View Controls (Focus Camps vs Entire District) */}
+      <div className="absolute top-3 right-3 z-[400] flex items-center gap-1.5 bg-[#FFFFFF] p-1 rounded-[8px] border border-[#E5E7EB] shadow-sm">
         <button
-          onClick={() => setShowLayerMenu(!showLayerMenu)}
-          className="bg-[#FFFFFF] px-2.5 py-1.5 rounded-[7px] border border-[#E5E7EB] text-[12px] font-medium text-[#111111] hover:bg-[#F7F8FA] transition-colors flex items-center gap-1.5 cursor-pointer"
+          onClick={handleFocusCamps}
+          className={`px-2.5 py-1 text-[11px] font-semibold rounded-[5px] flex items-center gap-1.5 transition-colors cursor-pointer ${
+            viewMode === 'camps'
+              ? 'bg-[#EAF3FF] text-[#0066CC]'
+              : 'text-[#4B5563] hover:text-[#111111] hover:bg-[#F7F8FA]'
+          }`}
+          title="Zoom to relief camps area with clear spacing"
         >
-          <Layers className="w-3.5 h-3.5 text-[#0066CC]" />
-          <span>Layers</span>
+          <Crosshair className="w-3.5 h-3.5" />
+          <span>Focus Camps</span>
         </button>
 
-        {showLayerMenu && (
-          <div className="mt-1.5 w-52 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] p-2.5 space-y-2 z-[400]">
-            <div className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider pb-1 border-b border-[#E5E7EB]">
-              Map Visibility
-            </div>
-
-            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers.fadedMask}
-                onChange={(e) => setLayers({ ...layers, fadedMask: e.target.checked })}
-                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
-              />
-              <span>Fade Outside Districts</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers.boundaries}
-                onChange={(e) => setLayers({ ...layers, boundaries: e.target.checked })}
-                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
-              />
-              <span>Tirunelveli Boundary</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers.wards}
-                onChange={(e) => setLayers({ ...layers, wards: e.target.checked })}
-                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
-              />
-              <span>Administrative Wards</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers.camps}
-                onChange={(e) => setLayers({ ...layers, camps: e.target.checked })}
-                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
-              />
-              <span>Relief Camp Markers</span>
-            </label>
-          </div>
-        )}
+        <button
+          onClick={handleFocusDistrict}
+          className={`px-2.5 py-1 text-[11px] font-semibold rounded-[5px] flex items-center gap-1.5 transition-colors cursor-pointer ${
+            viewMode === 'district'
+              ? 'bg-[#EAF3FF] text-[#0066CC]'
+              : 'text-[#4B5563] hover:text-[#111111] hover:bg-[#F7F8FA]'
+          }`}
+          title="View full Tirunelveli district administrative boundary"
+        >
+          <Compass className="w-3.5 h-3.5" />
+          <span>District Boundary</span>
+        </button>
       </div>
 
-      {/* Selected Ward Card */}
-      {selectedWard && (
-        <div className="absolute bottom-3 left-3 z-[400] max-w-xs bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] p-3 text-[12px]">
-          <div className="flex items-center justify-between pb-1 mb-2 border-b border-[#E5E7EB]">
-            <span className="font-semibold text-[#111111]">{selectedWard.name}</span>
-            <button
-              onClick={() => setSelectedWard(null)}
-              className="text-[#6B7280] hover:text-[#111111] text-[11px] cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="space-y-1 text-[#4B5563]">
-            <div className="flex justify-between">
-              <span>Camps:</span>
-              <strong className="text-[#111111]">{selectedWard.campsCount}</strong>
-            </div>
-            <div className="flex justify-between">
-              <span>Population:</span>
-              <strong className="text-[#111111]">{selectedWard.population.toLocaleString()}</strong>
-            </div>
-            <div className="flex justify-between">
-              <span>Active cases:</span>
-              <strong className="text-[#111111]">{selectedWard.activeCases}</strong>
-            </div>
-            <div className="flex justify-between items-center pt-1 border-t border-[#E5E7EB]">
-              <span>Status:</span>
-              <RiskBadge level={selectedWard.riskLevel} size="sm" />
-            </div>
-          </div>
+      {/* Bottom Right: Map Legend */}
+      <div className="absolute bottom-3 right-3 z-[400] bg-[#FFFFFF] px-3 py-2 rounded-[7px] border border-[#E5E7EB] text-[11px] text-[#4B5563] shadow-sm flex items-center gap-3">
+        <span className="font-semibold text-[#111111]">Risk:</span>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-[#0066CC]"></span>
+          <span>Low</span>
         </div>
-      )}
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-[#D97706]"></span>
+          <span>Medium</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-[#EA580C]"></span>
+          <span>High</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-[#DC2626]"></span>
+          <span>Critical</span>
+        </div>
+      </div>
 
-      {/* React Leaflet Map */}
+      {/* Leaflet Map Canvas */}
       <MapContainer
-        center={TIRUNELVELI_CENTER}
-        zoom={11}
-        scrollWheelZoom={false}
+        center={mapCenter}
+        zoom={mapZoom}
+        scrollWheelZoom={true}
         className="h-full w-full"
       >
-        <MapInitHelper center={TIRUNELVELI_CENTER} zoom={11} />
+        <MapViewController targetCenter={mapCenter} targetZoom={mapZoom} />
 
-        {/* Standard, Highly-Reliable OpenStreetMap Tile Layer */}
+        {/* Crisp OpenStreetMap Tiles */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
         />
 
-        {/* Inverse Spotlight Mask: Fades out all surrounding regions while keeping Tirunelveli clear */}
-        {layers.fadedMask && (
-          <Polygon
-            positions={[SURROUNDING_MASK_OUTER, TIRUNELVELI_DISTRICT_BORDER]}
-            pathOptions={{
-              stroke: false,
-              fillColor: '#FFFFFF',
-              fillOpacity: 0.62,
-              interactive: false,
-            }}
+        {/* Authentic Official Tirunelveli Administrative Boundary */}
+        {showBoundary && (
+          <GeoJSON
+            data={tirunelveliBoundary as any}
+            style={() => ({
+              color: '#0066CC',
+              weight: 2.2,
+              opacity: 0.85,
+              fillColor: '#0066CC',
+              fillOpacity: 0.04,
+              dashArray: '4, 4',
+            })}
           />
         )}
 
-        {/* Distinctive Tirunelveli District Boundary Line */}
-        {layers.boundaries && (
-          <Polygon
-            positions={TIRUNELVELI_DISTRICT_BORDER}
-            pathOptions={{
-              color: '#0066CC',
-              weight: 2.5,
-              fillColor: '#0066CC',
-              fillOpacity: 0.05,
-            }}
-          >
-            <Tooltip sticky direction="top">
-              <span className="text-[12px] font-semibold text-[#0066CC]">Tirunelveli District</span>
-            </Tooltip>
-          </Polygon>
-        )}
-
-        {/* Administrative Wards Polygons inside Tirunelveli */}
-        {layers.wards &&
-          ADMINISTRATIVE_WARDS.map((ward) => (
-            <Polygon
-              key={ward.name}
-              positions={ward.polygon}
-              pathOptions={{
-                color: ward.riskLevel === 'HIGH' ? '#DC2626' : '#0066CC',
-                weight: 1.5,
-                fillColor: ward.riskLevel === 'HIGH' ? '#DC2626' : '#0066CC',
-                fillOpacity: 0.08,
-              }}
-              eventHandlers={{
-                click: () => setSelectedWard(ward),
-              }}
-            >
-              <Tooltip sticky direction="top">
-                <span className="text-[11px] font-medium text-[#111111]">{ward.name}</span>
-              </Tooltip>
-            </Polygon>
-          ))}
-
-        {/* Camps Markers */}
-        {layers.camps &&
-          camps.map((camp) => (
+        {/* Relief Camp Pins */}
+        {camps.map((camp) => {
+          const isSelected = selectedCampId === camp.id;
+          return (
             <Marker
               key={camp.id}
               position={[camp.location_lat, camp.location_lng]}
-              icon={createCleanMarker(camp.risk_level, camp.active_cases || 0)}
+              icon={createPinIcon(camp, isSelected)}
               eventHandlers={{
                 click: () => onSelectCamp && onSelectCamp(camp),
               }}
             >
               <Popup>
-                <div className="p-1 min-w-[200px] text-[12px] space-y-2">
-                  <div className="flex items-center justify-between">
+                <div className="p-1 min-w-[210px] text-[12px] space-y-2">
+                  <div className="flex items-center justify-between pb-1 border-b border-[#E5E7EB]">
                     <span className="font-semibold text-[#111111]">{camp.name}</span>
                     <RiskBadge level={camp.risk_level} size="sm" />
                   </div>
 
-                  <div className="space-y-1 text-[#4B5563] pt-1 border-t border-[#E5E7EB]">
+                  <div className="space-y-1 text-[#4B5563]">
+                    <div className="flex justify-between">
+                      <span>Taluk / Sector:</span>
+                      <strong className="text-[#111111]">{camp.ward || 'Tirunelveli'}</strong>
+                    </div>
                     <div className="flex justify-between">
                       <span>Population:</span>
-                      <strong className="text-[#111111]">{camp.population}</strong>
+                      <strong className="text-[#111111]">{camp.population.toLocaleString()}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span>Active cases:</span>
-                      <strong className="text-[#111111]">{camp.active_cases || 0}</strong>
+                      <span>Active Cases:</span>
+                      <strong className="text-[#DC2626]">{camp.active_cases || 0}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span>Top condition:</span>
-                      <span className="text-[#111111] truncate max-w-[110px]">
+                      <span>Top Condition:</span>
+                      <span className="text-[#111111] truncate max-w-[120px]">
                         {camp.top_syndrome || 'Gastrointestinal'}
                       </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Environmental:</span>
-                      <span className="text-[#111111]">Water issue</span>
                     </div>
                   </div>
 
                   {onSelectCamp && (
                     <button
                       onClick={() => onSelectCamp(camp)}
-                      className="w-full mt-2 py-1.5 px-3 text-[11px] font-medium rounded-[7px] bg-[#0066CC] hover:bg-[#004C99] text-white transition-colors cursor-pointer text-center"
+                      className="w-full mt-2 py-1.5 px-3 text-[11px] font-medium rounded-[6px] bg-[#0066CC] hover:bg-[#004C99] text-white transition-colors cursor-pointer text-center"
                     >
-                      View Camp
+                      Inspect Camp Station
                     </button>
                   )}
                 </div>
               </Popup>
             </Marker>
-          ))}
+          );
+        })}
       </MapContainer>
     </div>
   );
 };
+
+export default DistrictMap;

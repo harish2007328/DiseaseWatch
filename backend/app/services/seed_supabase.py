@@ -12,7 +12,7 @@ from app.services.supabase_client import get_supabase
 
 INITIAL_CAMPS = [
     {
-        "name": "Camp 01 — Govt High School (Palayamkottai)",
+        "name": "Camp 01 - Govt Higher Secondary School (Palayamkottai)",
         "location_lat": 8.7180,
         "location_lng": 77.7420,
         "population": 1250,
@@ -22,7 +22,7 @@ INITIAL_CAMPS = [
         "risk_score": 0.42,
     },
     {
-        "name": "Camp 02 — Community Hall (Tirunelveli Town)",
+        "name": "Camp 02 - Municipal Community Hall (Tirunelveli Town)",
         "location_lat": 8.7300,
         "location_lng": 77.7010,
         "population": 840,
@@ -32,7 +32,7 @@ INITIAL_CAMPS = [
         "risk_score": 0.18,
     },
     {
-        "name": "Camp 03 — Sports Complex (Melapalayam)",
+        "name": "Camp 03 - VOC Indoor Sports Complex (Melapalayam)",
         "location_lat": 8.6950,
         "location_lng": 77.7280,
         "population": 1600,
@@ -42,7 +42,7 @@ INITIAL_CAMPS = [
         "risk_score": 0.78,
     },
     {
-        "name": "Camp 04 — Panchayat Union Hall (Pettai)",
+        "name": "Camp 04 - Panchayat Union Primary School (Pettai)",
         "location_lat": 8.7420,
         "location_lng": 77.6750,
         "population": 620,
@@ -52,7 +52,7 @@ INITIAL_CAMPS = [
         "risk_score": 0.12,
     },
     {
-        "name": "Camp 05 — Relief Shelter B (Thatchanallur)",
+        "name": "Camp 05 - Cyclone Evacuee Shelter B (Thatchanallur)",
         "location_lat": 8.7510,
         "location_lng": 77.7290,
         "population": 910,
@@ -62,7 +62,7 @@ INITIAL_CAMPS = [
         "risk_score": 0.48,
     },
     {
-        "name": "Camp 06 — Red Cross Center (Murugankurichi)",
+        "name": "Camp 06 - Red Cross Disaster Relief Center (Murugankurichi)",
         "location_lat": 8.7110,
         "location_lng": 77.7350,
         "population": 1100,
@@ -84,28 +84,11 @@ def seed_supabase_data() -> Dict[str, Any]:
         "errors": []
     }
 
-    # 1. Seed Camps
+    # 1. Seed Camps ONLY if camps table is empty
     try:
-        # Check if camps already exist
         existing = client.table("camps").select("id, name").execute()
-        existing_names = {row["name"] for row in (existing.data or [])}
-
-        camps_to_insert = []
-        for c in INITIAL_CAMPS:
-            if c["name"] not in existing_names:
-                camps_to_insert.append({
-                    "name": c["name"],
-                    "location_lat": c["location_lat"],
-                    "location_lng": c["location_lng"],
-                    "population": c["population"],
-                    "district": c["district"],
-                    "ward": c.get("ward", "Central"),
-                    "risk_level": c.get("risk_level", "low"),
-                    "risk_score": c.get("risk_score", 0.0),
-                })
-
-        if camps_to_insert:
-            res = client.table("camps").insert(camps_to_insert).execute()
+        if not existing.data or len(existing.data) == 0:
+            res = client.table("camps").insert(INITIAL_CAMPS).execute()
             results["camps_inserted"] = len(res.data or [])
     except Exception as e:
         results["errors"].append(f"Camps seed error: {str(e)}")
