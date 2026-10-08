@@ -3,7 +3,6 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Map as MapIcon,
-  Tent,
   FileText,
   AlertTriangle,
   Layers,
@@ -13,17 +12,16 @@ import {
   Bell,
   Search,
   LogOut,
-  ChevronDown,
   X,
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getNotifications, markNotificationRead, getCamps } from '../services/api';
-import { Notification, Camp } from '../types';
+import { getNotifications, markNotificationRead } from '../services/api';
+import { Notification } from '../types';
 import { DisclaimerBanner } from './DisclaimerBanner';
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, role, activeCampId, switchRole, logout } = useAuth();
+  const { user, role, activeCampId, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,16 +29,6 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [camps, setCamps] = useState<Camp[]>([]);
-  const [showRoleMenu, setShowRoleMenu] = useState(false);
-
-  useEffect(() => {
-    getCamps()
-      .then((res) => {
-        if (res.data) setCamps(res.data);
-      })
-      .catch(() => {});
-  }, []);
 
   const fetchNotifs = async () => {
     try {
@@ -188,112 +176,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             )}
           </div>
 
-          {/* Camp Station Quick Selector */}
-          {role === 'camp' ? (
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-[#E5E7EB] bg-[#F7F8FA]">
-              <Tent className="w-3.5 h-3.5 text-[#0066CC]" />
-              <span className="text-[11px] text-[#6B7280]">Station:</span>
-              <select
-                value={activeCampId || (camps[0]?.id || '')}
-                onChange={(e) => switchRole('camp', e.target.value)}
-                className="bg-transparent text-[12px] font-semibold text-[#111111] focus:outline-none cursor-pointer max-w-[200px] truncate"
-                title="Select active relief camp station"
-              >
-                {camps.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-[#E5E7EB] bg-[#F7F8FA]">
-              <Tent className="w-3.5 h-3.5 text-[#6B7280]" />
-              <span className="text-[11px] text-[#6B7280]">Inspect Camp:</span>
-              <select
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    switchRole('camp', e.target.value);
-                    navigate('/');
-                  }
-                }}
-                className="bg-transparent text-[12px] font-medium text-[#111111] focus:outline-none cursor-pointer max-w-[190px] truncate"
-                title="Inspect a specific camp coordinator station"
-              >
-                <option value="">All District (Overview)</option>
-                {camps.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.ward || 'Tirunelveli'})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Role Indicator & Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => setShowRoleMenu(!showRoleMenu)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] border border-[#E5E7EB] hover:bg-[#F7F8FA] text-[12px] text-[#111111] transition-colors cursor-pointer"
-            >
-              <span className="w-2 h-2 rounded-full bg-[#0066CC]"></span>
-              <span className="font-medium">
-                {role === 'admin' ? 'District Administrator' : 'Camp Coordinator'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#6B7280]" />
-            </button>
-
-            {showRoleMenu && (
-              <div className="absolute right-0 mt-2 w-72 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] z-50 p-2 space-y-1 shadow-lg">
-                <div className="px-2 py-1 text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider">
-                  Switch Operational Role
-                </div>
-                <button
-                  onClick={() => {
-                    switchRole('admin');
-                    setShowRoleMenu(false);
-                    navigate('/');
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-[6px] text-[12px] flex items-center justify-between transition-colors ${
-                    role === 'admin'
-                      ? 'bg-[#EAF3FF] text-[#0066CC] font-medium'
-                      : 'hover:bg-[#F7F8FA] text-[#111111]'
-                  }`}
-                >
-                  <span>District Health Officer (Admin)</span>
-                  {role === 'admin' && <span className="text-[10px] text-[#0066CC] font-semibold">Active</span>}
-                </button>
-
-                <div className="pt-1 border-t border-[#E5E7EB] mt-1">
-                  <div className="px-2 py-1 text-[11px] font-semibold text-[#6B7280]">
-                    Switch to Camp Coordinator ({camps.length} stations):
-                  </div>
-                  <div className="max-h-56 overflow-y-auto space-y-0.5">
-                    {camps.map((c) => (
-                      <button
-                        key={c.id}
-                        onClick={() => {
-                          switchRole('camp', c.id);
-                          setShowRoleMenu(false);
-                          navigate('/');
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-[6px] text-[12px] flex items-center justify-between transition-colors ${
-                          role === 'camp' && activeCampId === c.id
-                            ? 'bg-[#EAF3FF] text-[#0066CC] font-medium'
-                            : 'hover:bg-[#F7F8FA] text-[#111111]'
-                        }`}
-                      >
-                        <span className="truncate">{c.name}</span>
-                        {role === 'camp' && activeCampId === c.id && (
-                          <span className="text-[10px] text-[#0066CC] font-semibold shrink-0 ml-1">Active</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+          {/* Active Role Indicator */}
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] border border-[#E5E7EB] bg-[#F7F8FA] text-[12px]">
+            <span className="w-2 h-2 rounded-full bg-[#0066CC]"></span>
+            <span className="font-medium text-[#111111]">
+              {role === 'admin' ? 'District Administrator' : 'Camp Coordinator'}
+            </span>
           </div>
 
           {/* Logout */}
