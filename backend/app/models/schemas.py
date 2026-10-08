@@ -162,9 +162,9 @@ class EnvironmentalReportResponse(BaseModel):
 
 # Risk assessment models
 class RiskAnalysisRequest(BaseModel):
-    camp_id: str
+    camp_id: Optional[str] = "camp-1"
     health_report_id: Optional[str] = None
-    symptoms: SymptomsInput
+    symptoms: Optional[SymptomsInput] = None
     case_count: int = 1
     case_growth_rate: float = 0
     severity: Severity = Severity.MILD
@@ -174,6 +174,7 @@ class RiskAnalysisRequest(BaseModel):
     mosquito_breeding: bool = False
     population: int = 100
     population_density: float = 1.0
+    environmental_factors: Optional[List[str]] = None
 
 
 class RiskAnalysisResponse(BaseModel):
@@ -186,8 +187,10 @@ class RiskAnalysisResponse(BaseModel):
 
 # Anomaly detection models
 class AnomalyRequest(BaseModel):
-    camp_id: str
-    current_cases: int
+    camp_id: Optional[str] = "camp-1"
+    current_cases: Optional[int] = None
+    recent_cases: Optional[List[int]] = None
+    baseline_cases: Optional[List[int]] = None
     historical_average: float = 0
     historical_std: float = 0
     time_window_days: int = 7
@@ -292,14 +295,18 @@ class DashboardSummary(BaseModel):
 
 # AI Recommendation models
 class RecommendationRequest(BaseModel):
-    suspected_syndrome: str
-    risk_level: str
-    symptoms: List[str]
-    environmental_conditions: List[str]
-    case_count: int
+    suspected_syndrome: Optional[str] = None
+    syndrome: Optional[str] = None
+    risk_level: Optional[str] = None
+    severity: Optional[str] = None
+    alert_reason: Optional[str] = None
+    symptoms: Optional[List[str]] = None
+    environmental_conditions: Optional[List[str]] = None
+    environmental_context: Optional[List[str]] = None
+    case_count: Optional[int] = 10
     growth_trend: float = 0
     camp_name: Optional[str] = None
-    nearby_affected_camps: List[str] = []
+    nearby_affected_camps: Optional[List[str]] = None
 
 
 class RecommendationResponse(BaseModel):

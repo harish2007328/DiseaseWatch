@@ -361,11 +361,11 @@ class RiskModel:
             features.get("severity_score", 1),
         ]])
 
-        isolation_score = self.anomaly_model.decision_function(feature_vector)[0]
-        isolation_anomaly = self.anomaly_model.predict(feature_vector)[0] == -1
+        isolation_score = float(self.anomaly_model.decision_function(feature_vector)[0])
+        isolation_anomaly = bool(self.anomaly_model.predict(feature_vector)[0] == -1)
 
         # Combined anomaly detection
-        is_anomaly = (z_score > 2.0) or (pct_increase > 100) or isolation_anomaly
+        is_anomaly = bool((z_score > 2.0) or (pct_increase > 100) or isolation_anomaly)
 
         if is_anomaly:
             if pct_increase > 300:
@@ -383,11 +383,11 @@ class RiskModel:
             "deviation": round(float(z_score), 2),
             "message": message,
             "details": {
-                "current_cases": current_cases,
-                "historical_average": historical_avg,
-                "historical_std": round(historical_std, 2),
+                "current_cases": int(current_cases),
+                "historical_average": float(historical_avg),
+                "historical_std": round(float(historical_std), 2),
                 "z_score": round(float(z_score), 2),
-                "percent_increase": round(pct_increase, 1),
+                "percent_increase": round(float(pct_increase), 1),
                 "isolation_forest_anomaly": isolation_anomaly,
                 "isolation_score": round(float(isolation_score), 3),
             }
