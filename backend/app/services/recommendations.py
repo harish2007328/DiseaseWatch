@@ -158,7 +158,22 @@ def generate_recommendation(
     if nearby_affected_camps is None:
         nearby_affected_camps = []
 
-    # Get syndrome-specific recommendations
+    # Try high-speed Groq AI first
+    try:
+        from app.services.groq_service import generate_groq_recommendation
+        groq_result = generate_groq_recommendation(
+            syndrome=suspected_syndrome,
+            alert_reason=f"{case_count} cases of {suspected_syndrome} reported with growth trend {growth_trend:.1f}x",
+            severity=risk_level,
+            environmental_context=environmental_conditions,
+            camp_name=camp_name or "Tirunelveli Relief Camp",
+        )
+        if groq_result:
+            return groq_result
+    except Exception as e:
+        pass
+
+    # Deterministic fallback template
     template = SYNDROME_RECOMMENDATIONS.get(
         suspected_syndrome,
         SYNDROME_RECOMMENDATIONS["General infectious illness risk"]
