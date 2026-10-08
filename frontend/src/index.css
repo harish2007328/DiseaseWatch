@@ -51,3 +51,15 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: #0066CC !important;
 }
+
+/* Tooltip styling for relief camp map pins */
+.clean-camp-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.clean-camp-tooltip::before {
+  display: none !important;
+}
+
