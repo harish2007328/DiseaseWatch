@@ -77,12 +77,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         ];
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] text-[#111111] flex flex-col font-sans">
+    <div className="h-screen bg-[#F7F8FA] text-[#111111] flex flex-col font-sans overflow-hidden">
       {/* Top Disclaimer Strip */}
       <DisclaimerBanner />
 
       {/* Top Header Bar */}
-      <header className="h-14 bg-[#FFFFFF] border-b border-[#E5E7EB] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
+      <header className="h-14 shrink-0 bg-[#FFFFFF] border-b border-[#E5E7EB] px-4 sm:px-6 flex items-center justify-between z-40">
         {/* Left: Product Wordmark & Context */}
         <div className="flex items-center gap-3">
           <NavLink to="/" className="flex items-center gap-2">
@@ -196,9 +196,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       </header>
 
       {/* Main App Body: Sidebar + Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Desktop Sidebar */}
-        <aside className="w-56 bg-[#FFFFFF] border-r border-[#E5E7EB] shrink-0 flex flex-col justify-between py-4 px-3 hidden md:flex">
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* Desktop Sidebar (Full screen height, internal scroll if needed) */}
+        <aside className="w-56 bg-[#FFFFFF] border-r border-[#E5E7EB] shrink-0 flex flex-col justify-between py-4 px-3 hidden md:flex h-full overflow-y-auto">
           <nav className="space-y-1">
             <div className="px-2.5 py-1 text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-1">
               {role === 'camp' ? 'Camp Operations' : 'District Surveillance'}
@@ -239,8 +239,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         </aside>
 
         {/* Content View Canvas */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto lg:overflow-hidden p-3 lg:p-4 flex flex-col min-h-0">
+          <div className="w-full h-full flex flex-col min-h-0">
             {children}
           </div>
         </main>

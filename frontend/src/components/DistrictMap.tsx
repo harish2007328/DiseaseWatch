@@ -76,36 +76,19 @@ function MapAutoFitter({
   }, [map]);
 
   useEffect(() => {
-    if (viewMode === 'district') {
-      map.setView(TIRUNELVELI_DISTRICT_CENTER, 10, { animate: true });
-      return;
-    }
-
-    if (camps && camps.length > 0) {
-      const validPoints: [number, number][] = camps
-        .filter((c) => c.location_lat != null && c.location_lng != null)
-        .map((c) => [Number(c.location_lat), Number(c.location_lng)]);
-
-      if (validPoints.length > 0) {
-        const bounds = L.latLngBounds(validPoints);
-        map.fitBounds(bounds, {
-          padding: [50, 50],
-          maxZoom: 13,
-          animate: true,
-        });
-      }
-    }
+    // Zoom out to show full Tirunelveli district administrative boundary
+    map.setView(TIRUNELVELI_DISTRICT_CENTER, 9.6, { animate: true });
   }, [camps, viewMode, map]);
 
   return null;
 }
 
-// Pan to camp when clicked/selected
+// Pan to camp when clicked/selected without destroying zoomed-out district view
 function PanToSelectedCamp({ camp }: { camp?: Camp }) {
   const map = useMap();
   useEffect(() => {
     if (camp && camp.location_lat != null && camp.location_lng != null) {
-      map.setView([Number(camp.location_lat), Number(camp.location_lng)], 14, {
+      map.panTo([Number(camp.location_lat), Number(camp.location_lng)], {
         animate: true,
       });
     }
@@ -201,8 +184,9 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
 
       {/* React Leaflet Map */}
       <MapContainer
-        center={DEFAULT_CAMPS_CENTER}
-        zoom={12}
+        center={TIRUNELVELI_DISTRICT_CENTER}
+        zoom={9.6}
+        minZoom={8.5}
         scrollWheelZoom={true}
         className="h-full w-full"
       >

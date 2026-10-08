@@ -56,8 +56,23 @@ export const demoLogin = (email: string, password: string) =>
 export const roleSelect = (data: { role: string; camp_id?: string; name?: string }) =>
   api.post('/api/auth/role-select', data);
 
-// Camps
-export const getCamps = () => api.get('/api/camps');
+// Fast In-Flight Cache & Deduplication
+let campsPromise: Promise<any> | null = null;
+let campsCacheTime = 0;
+
+export const getCamps = (forceRefresh = false) => {
+  const now = Date.now();
+  if (!forceRefresh && campsPromise && now - campsCacheTime < 8000) {
+    return campsPromise;
+  }
+  campsCacheTime = now;
+  campsPromise = api.get('/api/camps').catch((err) => {
+    campsPromise = null;
+    throw err;
+  });
+  return campsPromise;
+};
+
 export const getCamp = (id: string) => api.get(`/api/camps/${id}`);
 
 // Reports
@@ -95,7 +110,21 @@ export const updateAction = (id: string, status: string) =>
   api.patch(`/api/actions/${id}`, { status });
 
 // Dashboard
-export const getDashboardSummary = () => api.get('/api/dashboard/summary');
+let summaryPromise: Promise<any> | null = null;
+let summaryCacheTime = 0;
+
+export const getDashboardSummary = (forceRefresh = false) => {
+  const now = Date.now();
+  if (!forceRefresh && summaryPromise && now - summaryCacheTime < 8000) {
+    return summaryPromise;
+  }
+  summaryCacheTime = now;
+  summaryPromise = api.get('/api/dashboard/summary').catch((err) => {
+    summaryPromise = null;
+    throw err;
+  });
+  return summaryPromise;
+};
 
 // Notifications
 export const getNotifications = (campId?: string, role?: string) =>

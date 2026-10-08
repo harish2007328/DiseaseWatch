@@ -4,7 +4,6 @@ import {
   ArrowRight,
   TrendingUp,
   AlertCircle,
-  ShieldCheck,
   CheckCircle2,
   Table,
 } from 'lucide-react';
@@ -21,46 +20,81 @@ import {
   getDashboardSummary,
   getCamps,
   getAlerts,
-  getActions,
-  detectClusters,
 } from '../services/api';
-import { Camp, Alert, Action, Cluster, DashboardSummary } from '../types';
+import { Camp, Alert, DashboardSummary } from '../types';
 import { RiskBadge } from '../components/RiskBadge';
 import { DistrictMap } from '../components/DistrictMap';
 import { ActionModal } from '../components/ActionModal';
 import { NavLink } from 'react-router-dom';
 
 export const AdminDashboard: React.FC = () => {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [camps, setCamps] = useState<Camp[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [, setActions] = useState<Action[]>([]);
-  const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [, setLoading] = useState(true);
+  // Instant Cache Hydration: Render instantly from sessionStorage if available
+  const [summary, setSummary] = useState<DashboardSummary | null>(() => {
+    try {
+      const cached = sessionStorage.getItem('dw_summary');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [camps, setCamps] = useState<Camp[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('dw_camps');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [alerts, setAlerts] = useState<Alert[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('dw_alerts');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAlertForAction, setSelectedAlertForAction] = useState<Alert | null>(null);
-  const [selectedCamp, setSelectedCamp] = useState<Camp | null>(null);
+  const [selectedCamp, setSelectedCamp] = useState<Camp | null>(() => {
+    try {
+      const cached = sessionStorage.getItem('dw_camps');
+      if (cached) {
+        const list: Camp[] = JSON.parse(cached);
+        return list.length > 0 ? list[0] : null;
+      }
+    } catch {}
+    return null;
+  });
   const [rightViewTab, setRightViewTab] = useState<'trends' | 'roster'>('trends');
 
   const loadData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    else setLoading(true);
 
     try {
-      const [sumRes, campsRes, alertsRes, actionsRes, clustersRes] = await Promise.all([
-        getDashboardSummary(),
-        getCamps(),
+      // Fast, lightweight parallel fetching (no redundant cluster calculation)
+      const [sumRes, campsRes, alertsRes] = await Promise.all([
+        getDashboardSummary(isRefresh),
+        getCamps(isRefresh),
         getAlerts(),
-        getActions(),
-        detectClusters(),
       ]);
 
       const loadedCamps: Camp[] = campsRes.data || [];
-      setSummary(sumRes.data);
+      const loadedSummary = sumRes.data;
+      const loadedAlerts = alertsRes.data || [];
+
+      setSummary(loadedSummary);
       setCamps(loadedCamps);
-      setAlerts(alertsRes.data || []);
-      setActions(actionsRes.data || []);
-      setClusters(clustersRes.data?.clusters || []);
+      setAlerts(loadedAlerts);
+
+      // Save to local session cache for 0ms loads
+      try {
+        sessionStorage.setItem('dw_summary', JSON.stringify(loadedSummary));
+        sessionStorage.setItem('dw_camps', JSON.stringify(loadedCamps));
+        sessionStorage.setItem('dw_alerts', JSON.stringify(loadedAlerts));
+      } catch {}
 
       if (loadedCamps.length > 0) {
         setSelectedCamp((prev) => {
@@ -77,7 +111,6 @@ export const AdminDashboard: React.FC = () => {
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
@@ -113,17 +146,16 @@ export const AdminDashboard: React.FC = () => {
   ).length;
   const activeAlertsCount = alerts.filter((a) => a.status !== 'resolved').length;
 
-  // Alerts relevant to the selected camp (or top alerts)
   const campAlerts = selectedCamp
     ? alerts.filter((a) => a.camp_id === selectedCamp.id)
     : [];
 
   return (
-    <div className="space-y-4">
-      {/* Clean Single-Line Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <div className="h-full flex flex-col min-h-0 space-y-2.5">
+      {/* Clean Executive Header (Shrink-0) */}
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-[20px] font-bold tracking-tight text-[#111111]">
+          <h1 className="text-[19px] font-bold tracking-tight text-[#111111] leading-tight">
             District Health Command
           </h1>
           <p className="text-[12px] text-[#6B7280]">
@@ -134,7 +166,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-[11px] font-semibold bg-[#EAF3FF] text-[#0066CC] border border-[#BFDBFE]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#0066CC] animate-pulse"></span>
-            <span>{totalCamps} Stations Live</span>
+            <span>{totalCamps} Relief Stations Online</span>
           </span>
           <button
             onClick={() => loadData(true)}
@@ -147,45 +179,38 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Two-Column Split Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      {/* Screen-Fit Command Center: Fixed Full-Height Map on Left, Scrollable Values on Right */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 overflow-hidden">
         {/* ========================================================= */}
-        {/* LEFT COLUMN (7 COLS): GIS MAP & STATION SELECTOR */}
+        {/* LEFT COLUMN (7 COLS): FULL-HEIGHT GIS MAP + STATION DROPDOWN */}
         {/* ========================================================= */}
-        <div className="lg:col-span-7 space-y-2">
-          <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[10px] p-3 shadow-xs">
-            {/* Clean Map Bar: Quick Stations & GIS link */}
-            <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[#E5E7EB]">
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
-                <span className="font-semibold text-[#6B7280] uppercase tracking-wider shrink-0 text-[10px] mr-0.5">
-                  Stations:
-                </span>
-                {camps.map((camp) => {
-                  const isSelected = selectedCamp?.id === camp.id;
-                  const short = camp.ward || camp.name.split(' - ')[1] || camp.name;
-                  return (
-                    <button
-                      key={camp.id}
-                      onClick={() => setSelectedCamp(camp)}
-                      className={`px-2 py-0.5 rounded-[5px] font-medium transition-all shrink-0 cursor-pointer border text-[11px] ${
-                        isSelected
-                          ? 'bg-[#0066CC] text-white border-[#0066CC] shadow-xs'
-                          : 'bg-[#F7F8FA] text-[#4B5563] border-[#E5E7EB] hover:bg-[#FFFFFF] hover:text-[#111111]'
-                      }`}
-                    >
-                      <span>{short}</span>
-                      {camp.active_cases > 0 && (
-                        <span
-                          className={`ml-1 font-bold ${
-                            isSelected ? 'text-white' : 'text-[#DC2626]'
-                          }`}
-                        >
-                          ({camp.active_cases})
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+        <div className="lg:col-span-7 flex flex-col h-full min-h-0">
+          <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[10px] p-3 shadow-xs flex flex-col h-full min-h-0">
+            {/* Top Bar: Station Dropdown & Full GIS Link */}
+            <div className="shrink-0 flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-2 min-w-0">
+                <label
+                  htmlFor="station-dropdown"
+                  className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider shrink-0"
+                >
+                  Station:
+                </label>
+                <select
+                  id="station-dropdown"
+                  value={selectedCamp?.id || ''}
+                  onChange={(e) => {
+                    const found = camps.find((c) => c.id === e.target.value);
+                    if (found) setSelectedCamp(found);
+                  }}
+                  className="bg-[#F7F8FA] border border-[#E5E7EB] rounded-[6px] px-2.5 py-1 text-[12px] font-semibold text-[#111111] focus:outline-none focus:border-[#0066CC] cursor-pointer max-w-[260px] truncate"
+                >
+                  {camps.map((camp) => (
+                    <option key={camp.id} value={camp.id}>
+                      {camp.ward ? `${camp.ward} — ${camp.name}` : camp.name}
+                      {camp.active_cases > 0 ? ` (${camp.active_cases} active)` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <NavLink
@@ -197,18 +222,19 @@ export const AdminDashboard: React.FC = () => {
               </NavLink>
             </div>
 
-            {/* The Map: Reduced Height (380px) */}
-            <DistrictMap
-              camps={camps}
-              clusters={clusters}
-              selectedCampId={selectedCamp?.id}
-              onSelectCamp={(camp) => setSelectedCamp(camp)}
-              height="380px"
-            />
+            {/* The Map: Fills 100% of Available Container Height */}
+            <div className="flex-1 min-h-0 relative rounded-[8px] overflow-hidden">
+              <DistrictMap
+                camps={camps}
+                selectedCampId={selectedCamp?.id}
+                onSelectCamp={(camp) => setSelectedCamp(camp)}
+                height="100%"
+              />
+            </div>
 
-            {/* Bottom Station Status Strip */}
+            {/* Bottom Station Status Strip (Shrink-0) */}
             {selectedCamp && (
-              <div className="mt-2.5 pt-2 border-t border-[#E5E7EB] flex items-center justify-between text-[11px] text-[#6B7280]">
+              <div className="shrink-0 mt-2 pt-2 border-t border-[#E5E7EB] flex items-center justify-between text-[11px] text-[#6B7280]">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-[#111111]">{selectedCamp.name}</span>
                   <RiskBadge level={selectedCamp.risk_level} size="sm" />
@@ -217,7 +243,11 @@ export const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="text-[11px]">
                   <span>Active Cases: </span>
-                  <strong className={selectedCamp.active_cases > 0 ? 'text-[#DC2626]' : 'text-[#111111]'}>
+                  <strong
+                    className={
+                      selectedCamp.active_cases > 0 ? 'text-[#DC2626]' : 'text-[#111111]'
+                    }
+                  >
                     {selectedCamp.active_cases || 0}
                   </strong>
                 </div>
@@ -227,12 +257,12 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* ========================================================= */}
-        {/* RIGHT COLUMN (5 COLS): STATION TELEMETRY & OPERATIONS */}
+        {/* RIGHT COLUMN (5 COLS): SCROLLABLE VALUES & TELEMETRY */}
         {/* ========================================================= */}
-        <div className="lg:col-span-5 space-y-3">
+        <div className="lg:col-span-5 flex flex-col h-full min-h-0 overflow-y-auto pr-1 space-y-3">
           {/* 1. Selected Station Telemetry Card */}
           {selectedCamp && (
-            <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[10px] p-3.5 shadow-xs space-y-2.5">
+            <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[10px] p-3.5 shadow-xs space-y-2.5 shrink-0">
               <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#E5E7EB]">
                 <div>
                   <div className="flex items-center gap-2">
@@ -242,7 +272,9 @@ export const AdminDashboard: React.FC = () => {
                     <RiskBadge level={selectedCamp.risk_level} size="sm" />
                   </div>
                   <p className="text-[11px] text-[#6B7280]">
-                    Sector: {selectedCamp.ward || 'Tirunelveli Central'} · {Number(selectedCamp.location_lat).toFixed(4)}, {Number(selectedCamp.location_lng).toFixed(4)}
+                    Sector: {selectedCamp.ward || 'Tirunelveli Central'} ·{' '}
+                    {Number(selectedCamp.location_lat).toFixed(4)},{' '}
+                    {Number(selectedCamp.location_lng).toFixed(4)}
                   </p>
                 </div>
               </div>
@@ -263,7 +295,11 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[#6B7280] block text-[10px] font-medium uppercase tracking-wider">
                     Active Cases
                   </span>
-                  <strong className={`text-[15px] font-bold block ${selectedCamp.active_cases > 0 ? 'text-[#DC2626]' : 'text-[#111111]'}`}>
+                  <strong
+                    className={`text-[15px] font-bold block ${
+                      selectedCamp.active_cases > 0 ? 'text-[#DC2626]' : 'text-[#111111]'
+                    }`}
+                  >
                     {selectedCamp.active_cases || 0}
                   </strong>
                   <span className="text-[10px] text-[#6B7280]">Under monitoring</span>
@@ -332,7 +368,7 @@ export const AdminDashboard: React.FC = () => {
           )}
 
           {/* 2. District Analytics & Directory Card */}
-          <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[10px] p-3.5 shadow-xs space-y-3">
+          <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[10px] p-3.5 shadow-xs space-y-3 shrink-0">
             {/* 4 Compact District KPIs Strip */}
             <div className="grid grid-cols-4 gap-2 text-center pb-2.5 border-b border-[#E5E7EB]">
               <div className="bg-[#F7F8FA] rounded-[6px] p-1.5 border border-[#E5E7EB]">
@@ -393,7 +429,7 @@ export const AdminDashboard: React.FC = () => {
             {/* Content for Trends Tab */}
             {rightViewTab === 'trends' ? (
               <div className="space-y-2 pt-1">
-                <div className="h-28 w-full">
+                <div className="h-32 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendData}>
                       <CartesianGrid stroke="#F2F3F5" strokeDasharray="3 3" vertical={false} />
@@ -480,7 +516,11 @@ export const AdminDashboard: React.FC = () => {
                           </td>
                           <td className="py-1.5 text-[#6B7280]">{camp.ward || 'Central'}</td>
                           <td className="py-1.5 font-semibold text-right">
-                            <span className={camp.active_cases > 0 ? 'text-[#DC2626]' : 'text-[#6B7280]'}>
+                            <span
+                              className={
+                                camp.active_cases > 0 ? 'text-[#DC2626]' : 'text-[#6B7280]'
+                              }
+                            >
                               {camp.active_cases || 0}
                             </span>
                           </td>
