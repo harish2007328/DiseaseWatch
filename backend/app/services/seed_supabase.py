@@ -9,7 +9,69 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.services.supabase_client import get_supabase
-from app.services.demo_data import INITIAL_CAMPS
+
+INITIAL_CAMPS = [
+    {
+        "name": "Camp 01 — Govt High School (Palayamkottai)",
+        "location_lat": 8.7180,
+        "location_lng": 77.7420,
+        "population": 1250,
+        "district": "Tirunelveli",
+        "ward": "Palayamkottai",
+        "risk_level": "medium",
+        "risk_score": 0.42,
+    },
+    {
+        "name": "Camp 02 — Community Hall (Tirunelveli Town)",
+        "location_lat": 8.7300,
+        "location_lng": 77.7010,
+        "population": 840,
+        "district": "Tirunelveli",
+        "ward": "Tirunelveli Town",
+        "risk_level": "low",
+        "risk_score": 0.18,
+    },
+    {
+        "name": "Camp 03 — Sports Complex (Melapalayam)",
+        "location_lat": 8.6950,
+        "location_lng": 77.7280,
+        "population": 1600,
+        "district": "Tirunelveli",
+        "ward": "Melapalayam",
+        "risk_level": "high",
+        "risk_score": 0.78,
+    },
+    {
+        "name": "Camp 04 — Panchayat Union Hall (Pettai)",
+        "location_lat": 8.7420,
+        "location_lng": 77.6750,
+        "population": 620,
+        "district": "Tirunelveli",
+        "ward": "Pettai",
+        "risk_level": "low",
+        "risk_score": 0.12,
+    },
+    {
+        "name": "Camp 05 — Relief Shelter B (Thatchanallur)",
+        "location_lat": 8.7510,
+        "location_lng": 77.7290,
+        "population": 910,
+        "district": "Tirunelveli",
+        "ward": "Thatchanallur",
+        "risk_level": "medium",
+        "risk_score": 0.48,
+    },
+    {
+        "name": "Camp 06 — Red Cross Center (Murugankurichi)",
+        "location_lat": 8.7110,
+        "location_lng": 77.7350,
+        "population": 1100,
+        "district": "Tirunelveli",
+        "ward": "Murugankurichi",
+        "risk_level": "critical",
+        "risk_score": 0.88,
+    },
+]
 
 def seed_supabase_data() -> Dict[str, Any]:
     client = get_supabase()

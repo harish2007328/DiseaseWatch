@@ -22,15 +22,13 @@ async def start_keep_alive(interval_seconds: int = 600):
     """
     # Render automatically sets RENDER_EXTERNAL_URL for web services
     # e.g., https://diseasewatch-api.onrender.com
-    public_url = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("APP_URL") or os.getenv("BACKEND_URL")
+    public_url = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("APP_URL")
 
     if not public_url:
-        logger.info("[KeepAlive] No RENDER_EXTERNAL_URL or APP_URL set. Running in local mode (internal health loop).")
-        # In local or default mode, we can monitor self-health
-        ping_target = "http://127.0.0.1:8000/api/health"
-    else:
-        ping_target = f"{public_url.rstrip('/')}/api/health"
+        logger.info("[KeepAlive] Cloud keep-alive disabled in local dev environment (Render URL not detected).")
+        return
 
+    ping_target = f"{public_url.rstrip('/')}/api/health"
     logger.info(f"[KeepAlive] Initiated keep-alive monitor for: {ping_target} (interval: {interval_seconds}s)")
 
     # Wait 60 seconds after startup before starting ping loop

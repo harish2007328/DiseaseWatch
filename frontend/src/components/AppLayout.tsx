@@ -182,22 +182,47 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
           </div>
 
           {/* Camp Station Quick Selector */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-[#E5E7EB] bg-[#F7F8FA]">
-            <Tent className="w-3.5 h-3.5 text-[#0066CC]" />
-            <span className="text-[11px] text-[#6B7280]">Station:</span>
-            <select
-              value={activeCampId || 'camp-1'}
-              onChange={(e) => switchRole('camp', e.target.value)}
-              className="bg-transparent text-[12px] font-semibold text-[#111111] focus:outline-none cursor-pointer"
-              title="Select active relief camp station"
-            >
-              {camps.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {role === 'camp' ? (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-[#E5E7EB] bg-[#F7F8FA]">
+              <Tent className="w-3.5 h-3.5 text-[#0066CC]" />
+              <span className="text-[11px] text-[#6B7280]">Station:</span>
+              <select
+                value={activeCampId || (camps[0]?.id || '')}
+                onChange={(e) => switchRole('camp', e.target.value)}
+                className="bg-transparent text-[12px] font-semibold text-[#111111] focus:outline-none cursor-pointer max-w-[200px] truncate"
+                title="Select active relief camp station"
+              >
+                {camps.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-[#E5E7EB] bg-[#F7F8FA]">
+              <Tent className="w-3.5 h-3.5 text-[#6B7280]" />
+              <span className="text-[11px] text-[#6B7280]">Inspect Camp:</span>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    switchRole('camp', e.target.value);
+                    navigate('/');
+                  }
+                }}
+                className="bg-transparent text-[12px] font-medium text-[#111111] focus:outline-none cursor-pointer max-w-[190px] truncate"
+                title="Inspect a specific camp coordinator station"
+              >
+                <option value="">All District (Overview)</option>
+                {camps.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.ward || 'Tirunelveli'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Role Indicator & Switcher */}
           <div className="relative">
@@ -213,7 +238,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             </button>
 
             {showRoleMenu && (
-              <div className="absolute right-0 mt-2 w-64 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] z-50 p-2 space-y-1">
+              <div className="absolute right-0 mt-2 w-72 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] z-50 p-2 space-y-1 shadow-lg">
                 <div className="px-2 py-1 text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider">
                   Switch Operational Role
                 </div>
@@ -229,34 +254,36 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                       : 'hover:bg-[#F7F8FA] text-[#111111]'
                   }`}
                 >
-                  <span>District Health Officer</span>
-                  {role === 'admin' && <span className="text-[10px]">Active</span>}
+                  <span>District Health Officer (Admin)</span>
+                  {role === 'admin' && <span className="text-[10px] text-[#0066CC] font-semibold">Active</span>}
                 </button>
 
                 <div className="pt-1 border-t border-[#E5E7EB] mt-1">
-                  <div className="px-2 py-1 text-[11px] font-medium text-[#6B7280]">
-                    Camp Stations:
+                  <div className="px-2 py-1 text-[11px] font-semibold text-[#6B7280]">
+                    Switch to Camp Coordinator ({camps.length} stations):
                   </div>
-                  {camps.slice(0, 3).map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        switchRole('camp', c.id);
-                        setShowRoleMenu(false);
-                        navigate('/');
-                      }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-[6px] text-[12px] flex items-center justify-between transition-colors ${
-                        role === 'camp' && activeCampId === c.id
-                          ? 'bg-[#EAF3FF] text-[#0066CC] font-medium'
-                          : 'hover:bg-[#F7F8FA] text-[#111111]'
-                      }`}
-                    >
-                      <span className="truncate">{c.name}</span>
-                      {role === 'camp' && activeCampId === c.id && (
-                        <span className="text-[10px]">Active</span>
-                      )}
-                    </button>
-                  ))}
+                  <div className="max-h-56 overflow-y-auto space-y-0.5">
+                    {camps.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => {
+                          switchRole('camp', c.id);
+                          setShowRoleMenu(false);
+                          navigate('/');
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-[6px] text-[12px] flex items-center justify-between transition-colors ${
+                          role === 'camp' && activeCampId === c.id
+                            ? 'bg-[#EAF3FF] text-[#0066CC] font-medium'
+                            : 'hover:bg-[#F7F8FA] text-[#111111]'
+                        }`}
+                      >
+                        <span className="truncate">{c.name}</span>
+                        {role === 'camp' && activeCampId === c.id && (
+                          <span className="text-[10px] text-[#0066CC] font-semibold shrink-0 ml-1">Active</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

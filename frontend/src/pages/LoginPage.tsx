@@ -30,15 +30,28 @@ export const LoginPage: React.FC = () => {
     setErrorMsg('');
     setSubmitting(true);
     try {
+      const loginAction = async () => {
+        if (selectedRole === 'admin') {
+          await loginWithRole('admin', undefined, 'Dr. Priya Sharma (District Health Officer)');
+        } else {
+          const campObj = camps.find((c) => c.id === selectedCampId);
+          const name = campObj ? campObj.name : `Relief Camp (${selectedCampId})`;
+          await loginWithRole('camp', selectedCampId, `Coordinator — ${name}`);
+        }
+      };
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 2500)
+      );
+
+      await Promise.race([loginAction(), timeoutPromise]);
+    } catch (err: any) {
+      // Immediate local fallback on network delay or timeout
       if (selectedRole === 'admin') {
         await loginWithRole('admin', undefined, 'Dr. Priya Sharma (District Health Officer)');
       } else {
-        const campObj = camps.find((c) => c.id === selectedCampId);
-        const name = campObj ? campObj.name : `Relief Camp (${selectedCampId})`;
-        await loginWithRole('camp', selectedCampId, `Coordinator — ${name}`);
+        await loginWithRole('camp', selectedCampId, 'Camp Coordinator');
       }
-    } catch (err: any) {
-      setErrorMsg('Authentication failed. Please check backend connection.');
     } finally {
       setSubmitting(false);
     }
