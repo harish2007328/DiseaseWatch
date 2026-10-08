@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Send Keep-Alive Ping to Render Backend
         run: |
-          TARGET_URL="${{ secrets.RENDER_API_URL || 'https://diseasewatch-api.onrender.com' }}"
+          TARGET_URL="${{ secrets.RENDER_API_URL || 'https://diseasewatch.onrender.com' }}"
           echo "Pinging ${TARGET_URL}/api/health..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${TARGET_URL}/api/health" || echo "failed")
           echo "Response code: $STATUS"
