@@ -93,14 +93,14 @@ export const MLSandbox: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <Cpu className="w-5 h-5 text-purple-600" />
-            Machine Learning Risk & Syndromic Inference Sandbox
+            ML Syndromic Inference Sandbox
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Test and evaluate the dual Random Forest & Heuristic syndromic classification pipeline in real-time
+          <p className="text-xs text-slate-400 mt-0.5">
+            Test multi-vector symptom & environmental feature sets in real-time
           </p>
         </div>
 

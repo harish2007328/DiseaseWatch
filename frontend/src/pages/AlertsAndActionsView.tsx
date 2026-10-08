@@ -59,14 +59,14 @@ export const AlertsAndActionsView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
-            Alerts & Response Directives
+            Alerts & Field Directives
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Automated outbreak early warnings and dispatched public-health response actions
+          <p className="text-xs text-slate-400 mt-0.5">
+            Surveillance alerts and assigned response actions
           </p>
         </div>
 

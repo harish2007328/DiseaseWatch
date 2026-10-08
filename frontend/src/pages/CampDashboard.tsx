@@ -148,16 +148,16 @@ export const CampDashboard: React.FC = () => {
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+            <h2 className="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
               <ClipboardList className="w-4 h-4 text-teal-600" />
-              Public Health Directives Assigned To This Camp
+              Assigned Field Directives
             </h2>
-            <p className="text-xs text-slate-500">
-              Immediate preventive and sanitation measures mandated by the District Health Authority
+            <p className="text-xs text-slate-400">
+              Response and sanitation measures issued by District Health
             </p>
           </div>
           <span className="text-xs font-bold bg-teal-50 text-teal-800 px-2.5 py-1 rounded-lg">
-            {actions.filter((a) => a.status === 'completed').length} / {actions.length} Completed
+            {actions.filter((a) => a.status === 'completed').length} / {actions.length} Done
           </span>
         </div>
 

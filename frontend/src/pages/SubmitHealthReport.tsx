@@ -69,6 +69,7 @@ export const SubmitHealthReport: React.FC = () => {
     setAnalyzing(true);
     try {
       const res = await analyzeRisk({
+        camp_id: selectedCampId,
         symptoms,
         case_count: Number(caseCount) || 1,
         severity,
@@ -125,14 +126,14 @@ export const SubmitHealthReport: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <Activity className="w-5 h-5 text-sky-600" />
             Field Health Incident Report
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Report syndromic clusters and unusual health manifestations directly to the district surveillance network
+          <p className="text-xs text-slate-400 mt-0.5">
+            Log syndromic cases with real-time ML risk estimation
           </p>
         </div>
       </div>

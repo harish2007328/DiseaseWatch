@@ -77,14 +77,14 @@ export const VerificationQueue: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <FileCheck2 className="w-5 h-5 text-sky-600" />
-            District Incident Verification Desk
+            Field Verification Queue
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Validate incoming camp incident telemetry to filter noise, avoid false panics, and endorse alerts
+          <p className="text-xs text-slate-400 mt-0.5">
+            Review and endorse incoming camp incident telemetry
           </p>
         </div>
 
