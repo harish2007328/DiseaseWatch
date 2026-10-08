@@ -13,14 +13,20 @@ from app.ml.risk_model import get_model
 from app.api import auth, camps, reports, analysis, alerts, actions, dashboard
 
 
+import asyncio
+from app.services.keep_alive import start_keep_alive
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize ML model on startup."""
+    """Initialize ML model and keep-alive worker on startup."""
     print("DiseaseWatch Backend starting...")
     print("Training ML model...")
     get_model()
     print("ML model ready.")
+    # Launch keep-alive background worker for Render 24/7 uptime
+    keep_alive_task = asyncio.create_task(start_keep_alive(interval_seconds=600))
     yield
+    keep_alive_task.cancel()
     print("DiseaseWatch Backend shutting down.")
 
 

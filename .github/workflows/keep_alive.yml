@@ -1,0 +1,23 @@
+name: Render Free Tier 24/7 Keep-Alive
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent Render free instance from sleeping
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Keep-Alive Ping to Render Backend
+        run: |
+          TARGET_URL="${{ secrets.RENDER_API_URL || 'https://diseasewatch-api.onrender.com' }}"
+          echo "Pinging ${TARGET_URL}/api/health..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${TARGET_URL}/api/health" || echo "failed")
+          echo "Response code: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "Render service is awake and healthy!"
+          else
+            echo "Render service pinged (status: $STATUS)."
+          fi

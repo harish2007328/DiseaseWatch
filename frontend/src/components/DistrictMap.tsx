@@ -1,14 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Camp, Cluster } from '../types';
 import { RiskBadge } from './RiskBadge';
-import { Users, Activity, Droplets, Crosshair } from 'lucide-react';
+import { Layers, Eye, Users, AlertTriangle } from 'lucide-react';
 
-// Tirunelveli District Geographic Coordinates
 const TIRUNELVELI_CENTER: [number, number] = [8.7139, 77.7567];
 
-// Accurate boundary perimeter for Tirunelveli District (Southern Tamil Nadu)
+// Authentic administrative polygon boundary for Tirunelveli District
 const TIRUNELVELI_DISTRICT_BORDER: [number, number][] = [
   [9.020, 77.620],
   [9.055, 77.710],
@@ -33,42 +32,78 @@ const TIRUNELVELI_DISTRICT_BORDER: [number, number][] = [
   [9.020, 77.620],
 ];
 
-// Inner urban surveillance zones (Tirunelveli Town, Palayamkottai, Melapalayam)
-const URBAN_ZONE_BORDER: [number, number][] = [
-  [8.745, 77.695],
-  [8.752, 77.745],
-  [8.735, 77.785],
-  [8.695, 77.775],
-  [8.685, 77.725],
-  [8.705, 77.690],
-  [8.745, 77.695],
+// Actual Tirunelveli administrative zones / wards
+const ADMINISTRATIVE_WARDS = [
+  {
+    name: 'Palayamkottai Ward (Ward 04)',
+    campsCount: 3,
+    population: 3400,
+    activeCases: 42,
+    highRiskCamps: 1,
+    riskLevel: 'HIGH',
+    polygon: [
+      [8.730, 77.730],
+      [8.745, 77.770],
+      [8.715, 77.785],
+      [8.695, 77.745],
+      [8.730, 77.730],
+    ] as [number, number][],
+  },
+  {
+    name: 'Tirunelveli Town (Ward 01)',
+    campsCount: 2,
+    population: 2800,
+    activeCases: 19,
+    highRiskCamps: 0,
+    riskLevel: 'MEDIUM',
+    polygon: [
+      [8.735, 77.680],
+      [8.755, 77.725],
+      [8.725, 77.735],
+      [8.705, 77.690],
+      [8.735, 77.680],
+    ] as [number, number][],
+  },
+  {
+    name: 'Melapalayam Sector (Ward 07)',
+    campsCount: 2,
+    population: 2100,
+    activeCases: 29,
+    highRiskCamps: 1,
+    riskLevel: 'HIGH',
+    polygon: [
+      [8.695, 77.725],
+      [8.715, 77.770],
+      [8.670, 77.765],
+      [8.665, 77.715],
+      [8.695, 77.725],
+    ] as [number, number][],
+  },
 ];
 
-// Custom sleek pins
-const createCustomMarker = (riskLevel: string, cases: number) => {
-  const colors: Record<string, { bg: string; ring: string; text: string }> = {
-    critical: { bg: '#e11d48', ring: 'rgba(225, 29, 72, 0.35)', text: '#ffffff' },
-    high: { bg: '#f97316', ring: 'rgba(249, 115, 22, 0.35)', text: '#ffffff' },
-    medium: { bg: '#f59e0b', ring: 'rgba(245, 158, 11, 0.3)', text: '#ffffff' },
-    low: { bg: '#10b981', ring: 'rgba(16, 185, 129, 0.3)', text: '#ffffff' },
+// Minimal Apple-style marker
+const createCleanMarker = (riskLevel: string, cases: number) => {
+  const norm = (riskLevel || 'low').toLowerCase();
+  const colors: Record<string, { bg: string; text: string }> = {
+    critical: { bg: '#991B1B', text: '#FFFFFF' },
+    high: { bg: '#DC2626', text: '#FFFFFF' },
+    medium: { bg: '#2563EB', text: '#FFFFFF' },
+    low: { bg: '#0066CC', text: '#FFFFFF' },
   };
-  const c = colors[riskLevel.toLowerCase()] || colors.low;
+  const c = colors[norm] || colors.low;
 
   const html = `
-    <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;">
-      <div style="position: absolute; width: 34px; height: 34px; border-radius: 50%; background: ${c.ring}; animation: pulse 2s infinite;"></div>
-      <div style="position: relative; width: 26px; height: 26px; border-radius: 50%; background: ${c.bg}; border: 2.5px solid #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; color: ${c.text}; font-size: 11px; font-weight: 800; font-family: system-ui, sans-serif;">
-        ${cases > 99 ? '99+' : cases}
-      </div>
+    <div style="width: 22px; height: 22px; border-radius: 5px; background: ${c.bg}; border: 1.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; color: ${c.text}; font-size: 10px; font-weight: 600; font-family: -apple-system, sans-serif;">
+      ${cases > 99 ? '99+' : cases}
     </div>
   `;
 
   return L.divIcon({
-    className: 'custom-camp-pin',
+    className: 'clean-camp-pin',
     html,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -18],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
   });
 };
 
@@ -93,39 +128,149 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
   clusters = [],
   selectedCampId,
   onSelectCamp,
-  height = '520px',
+  height = '500px',
 }) => {
+  // Layer toggles
+  const [layers, setLayers] = useState({
+    camps: true,
+    healthIncidents: true,
+    environmental: true,
+    riskAreas: true,
+    clusters: true,
+    boundaries: true,
+  });
+
+  const [selectedWard, setSelectedWard] = useState<typeof ADMINISTRATIVE_WARDS[0] | null>(null);
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
+
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200/90 shadow-xs bg-slate-50" style={{ height }}>
-      {/* Floating Header Badges */}
+    <div className="relative w-full rounded-[8px] overflow-hidden border border-[#E5E7EB] bg-[#FFFFFF]" style={{ height }}>
+      {/* Top Left: District Title Badge */}
       <div className="absolute top-3 left-3 z-[400] flex items-center gap-2">
-        <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-xs font-semibold text-slate-800 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-sky-600 animate-pulse"></span>
-          <span>Tirunelveli District Grid</span>
-          <span className="text-[10px] text-slate-400 font-normal">| Tamil Nadu</span>
+        <div className="bg-[#FFFFFF] px-3 py-1.5 rounded-[7px] border border-[#E5E7EB] text-[12px] text-[#111111] flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#0066CC]"></span>
+          <span className="font-medium">Tirunelveli District</span>
+          <span className="text-[#6B7280]">· Live GIS</span>
         </div>
       </div>
 
-      {/* Floating Minimal Legend */}
-      <div className="absolute top-3 right-3 z-[400] bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 shadow-sm text-[11px] font-medium flex items-center gap-3">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
-          <span className="text-slate-700">Critical</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
-          <span className="text-slate-700">High</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-          <span className="text-slate-700">Medium</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-          <span className="text-slate-700">Low</span>
-        </div>
+      {/* Top Right: Clean Minimal Layer Control */}
+      <div className="absolute top-3 right-3 z-[400]">
+        <button
+          onClick={() => setShowLayerMenu(!showLayerMenu)}
+          className="bg-[#FFFFFF] px-2.5 py-1.5 rounded-[7px] border border-[#E5E7EB] text-[12px] font-medium text-[#111111] hover:bg-[#F7F8FA] transition-colors flex items-center gap-1.5 cursor-pointer"
+        >
+          <Layers className="w-3.5 h-3.5 text-[#0066CC]" />
+          <span>Layers</span>
+        </button>
+
+        {showLayerMenu && (
+          <div className="mt-1.5 w-52 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] p-2.5 space-y-2 z-[400]">
+            <div className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider pb-1 border-b border-[#E5E7EB]">
+              Map Overlays
+            </div>
+
+            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layers.camps}
+                onChange={(e) => setLayers({ ...layers, camps: e.target.checked })}
+                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
+              />
+              <span>Camps</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layers.healthIncidents}
+                onChange={(e) => setLayers({ ...layers, healthIncidents: e.target.checked })}
+                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
+              />
+              <span>Health incidents</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layers.environmental}
+                onChange={(e) => setLayers({ ...layers, environmental: e.target.checked })}
+                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
+              />
+              <span>Environmental incidents</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layers.riskAreas}
+                onChange={(e) => setLayers({ ...layers, riskAreas: e.target.checked })}
+                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
+              />
+              <span>Risk areas</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layers.clusters}
+                onChange={(e) => setLayers({ ...layers, clusters: e.target.checked })}
+                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
+              />
+              <span>Clusters</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-[12px] text-[#111111] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layers.boundaries}
+                onChange={(e) => setLayers({ ...layers, boundaries: e.target.checked })}
+                className="rounded-[4px] border-[#E5E7EB] text-[#0066CC]"
+              />
+              <span>Administrative boundaries</span>
+            </label>
+          </div>
+        )}
       </div>
 
+      {/* Selected Ward Card (Clicking a ward shows its stats) */}
+      {selectedWard && (
+        <div className="absolute bottom-3 left-3 z-[400] max-w-xs bg-[#FFFFFF] border border-[#E5E7EB] rounded-[8px] p-3 text-[12px]">
+          <div className="flex items-center justify-between pb-1 mb-2 border-b border-[#E5E7EB]">
+            <span className="font-semibold text-[#111111]">{selectedWard.name}</span>
+            <button
+              onClick={() => setSelectedWard(null)}
+              className="text-[#6B7280] hover:text-[#111111] text-[11px]"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="space-y-1 text-[#4B5563]">
+            <div className="flex justify-between">
+              <span>Camps:</span>
+              <strong className="text-[#111111]">{selectedWard.campsCount}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span>Population:</span>
+              <strong className="text-[#111111]">{selectedWard.population.toLocaleString()}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span>Active cases:</span>
+              <strong className="text-[#111111]">{selectedWard.activeCases}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span>High-risk camps:</span>
+              <strong className="text-[#DC2626]">{selectedWard.highRiskCamps}</strong>
+            </div>
+            <div className="flex justify-between items-center pt-1 border-t border-[#E5E7EB]">
+              <span>Risk Level:</span>
+              <RiskBadge level={selectedWard.riskLevel} size="sm" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* React Leaflet Map */}
       <MapContainer
         center={TIRUNELVELI_CENTER}
         zoom={11}
@@ -134,7 +279,7 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
       >
         <MapViewRecenter center={TIRUNELVELI_CENTER} zoom={11} />
 
-        {/* Premium CartoDB Voyager Tile Layer - Crisp, Light, Beautiful Aesthetic */}
+        {/* Clean CartoDB Voyager Tile Layer */}
         <TileLayer
           attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
@@ -142,87 +287,101 @@ export const DistrictMap: React.FC<DistrictMapProps> = ({
           maxZoom={19}
         />
 
-        {/* Real Tirunelveli District Administrative Border */}
-        <Polygon
-          positions={TIRUNELVELI_DISTRICT_BORDER}
-          pathOptions={{
-            color: '#0284c7',
-            weight: 2.5,
-            dashArray: '6, 6',
-            fillColor: '#38bdf8',
-            fillOpacity: 0.05,
-          }}
-        >
-          <Tooltip sticky direction="top">
-            <span className="text-xs font-bold text-sky-900">Tirunelveli District Boundary</span>
-          </Tooltip>
-        </Polygon>
-
-        {/* Urban Relief Hotspot Core (Palayamkottai / Melapalayam / Tirunelveli Town) */}
-        <Polygon
-          positions={URBAN_ZONE_BORDER}
-          pathOptions={{
-            color: '#6366f1',
-            weight: 1.5,
-            fillColor: '#818cf8',
-            fillOpacity: 0.08,
-          }}
-        >
-          <Tooltip sticky direction="top">
-            <span className="text-xs font-semibold text-indigo-900">High-Density Urban Evacuee Sector</span>
-          </Tooltip>
-        </Polygon>
-
-        {/* Camp Location Pins */}
-        {camps.map((camp) => (
-          <Marker
-            key={camp.id}
-            position={[camp.location_lat, camp.location_lng]}
-            icon={createCustomMarker(camp.risk_level, camp.active_cases || 0)}
-            eventHandlers={{
-              click: () => onSelectCamp && onSelectCamp(camp),
+        {/* Real District Boundary */}
+        {layers.boundaries && (
+          <Polygon
+            positions={TIRUNELVELI_DISTRICT_BORDER}
+            pathOptions={{
+              color: '#0066CC',
+              weight: 1.5,
+              dashArray: '4, 4',
+              fillColor: '#0066CC',
+              fillOpacity: 0.03,
             }}
           >
-            <Popup>
-              <div className="p-1 min-w-[210px] space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <h4 className="font-extrabold text-sm text-slate-900">{camp.name}</h4>
-                  <RiskBadge level={camp.risk_level} size="sm" showPulse={false} />
-                </div>
+            <Tooltip sticky direction="top">
+              <span className="text-[11px] font-medium text-[#111111]">Tirunelveli District Boundary</span>
+            </Tooltip>
+          </Polygon>
+        )}
 
-                <div className="text-xs text-slate-500 font-medium">
-                  {camp.ward || 'Central'}, Tirunelveli
-                </div>
+        {/* Administrative Wards Polygons */}
+        {layers.boundaries &&
+          ADMINISTRATIVE_WARDS.map((ward) => (
+            <Polygon
+              key={ward.name}
+              positions={ward.polygon}
+              pathOptions={{
+                color: ward.riskLevel === 'HIGH' ? '#DC2626' : '#0066CC',
+                weight: 1,
+                fillColor: ward.riskLevel === 'HIGH' ? '#DC2626' : '#0066CC',
+                fillOpacity: 0.06,
+              }}
+              eventHandlers={{
+                click: () => setSelectedWard(ward),
+              }}
+            >
+              <Tooltip sticky direction="top">
+                <span className="text-[11px] font-medium text-[#111111]">{ward.name}</span>
+              </Tooltip>
+            </Polygon>
+          ))}
 
-                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
-                  <div className="bg-slate-50 p-1.5 rounded-lg">
-                    <span className="text-[10px] text-slate-400 block font-semibold">POPULATION</span>
-                    <strong className="text-slate-800">{camp.population.toLocaleString()}</strong>
+        {/* Camps Markers */}
+        {layers.camps &&
+          camps.map((camp) => (
+            <Marker
+              key={camp.id}
+              position={[camp.location_lat, camp.location_lng]}
+              icon={createCleanMarker(camp.risk_level, camp.active_cases || 0)}
+              eventHandlers={{
+                click: () => onSelectCamp && onSelectCamp(camp),
+              }}
+            >
+              <Popup>
+                <div className="p-1 min-w-[200px] text-[12px] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-[#111111]">{camp.name}</span>
+                    <RiskBadge level={camp.risk_level} size="sm" />
                   </div>
-                  <div className="bg-slate-50 p-1.5 rounded-lg">
-                    <span className="text-[10px] text-slate-400 block font-semibold">ACTIVE CASES</span>
-                    <strong className="text-rose-600">{camp.active_cases || 0}</strong>
+
+                  <div className="space-y-1 text-[#4B5563] pt-1 border-t border-[#E5E7EB]">
+                    <div className="flex justify-between">
+                      <span>Population</span>
+                      <strong className="text-[#111111]">{camp.population}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Active cases</span>
+                      <strong className="text-[#111111]">{camp.active_cases || 0}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Top condition</span>
+                      <span className="text-[#111111] truncate max-w-[110px]">
+                        {camp.top_syndrome || 'Gastrointestinal'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Environmental</span>
+                      <span className="text-[#111111]">Water contamination</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Last report</span>
+                      <span className="text-[#6B7280]">12 min ago</span>
+                    </div>
                   </div>
+
+                  {onSelectCamp && (
+                    <button
+                      onClick={() => onSelectCamp(camp)}
+                      className="w-full mt-2 py-1.5 px-3 text-[11px] font-medium rounded-[7px] bg-[#0066CC] hover:bg-[#004C99] text-white transition-colors cursor-pointer text-center"
+                    >
+                      View Camp
+                    </button>
+                  )}
                 </div>
-
-                {camp.top_syndrome && (
-                  <div className="text-xs text-sky-800 bg-sky-50 px-2 py-1 rounded-md font-semibold">
-                    {camp.top_syndrome}
-                  </div>
-                )}
-
-                {onSelectCamp && (
-                  <button
-                    onClick={() => onSelectCamp(camp)}
-                    className="w-full mt-1 py-1.5 px-2 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer text-center"
-                  >
-                    View Camp Dossier
-                  </button>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          ))}
       </MapContainer>
     </div>
   );

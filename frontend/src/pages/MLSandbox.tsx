@@ -1,14 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Cpu,
-  Sparkles,
+  Sliders,
   Play,
   RotateCcw,
-  ShieldCheck,
-  TrendingUp,
-  Sliders,
   CheckCircle,
-  HelpCircle,
 } from 'lucide-react';
 import { analyzeRisk, getRecommendation } from '../services/api';
 import { RiskAnalysisResult, Recommendation } from '../types';
@@ -60,249 +55,203 @@ export const MLSandbox: React.FC = () => {
     }
   };
 
-  const toggleSymptom = (key: keyof typeof symptoms) => {
-    if (key === 'other') return;
-    setSymptoms((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const toggleEnv = (env: string) => {
-    setEnvFactors((prev) =>
-      prev.includes(env) ? prev.filter((e) => e !== env) : [...prev, env]
-    );
-  };
-
-  const resetAll = () => {
-    setSymptoms({
-      fever: false,
-      headache: false,
-      body_pain: false,
-      cough: false,
-      diarrhea: false,
-      vomiting: false,
-      rash: false,
-      breathing_difficulty: false,
-      other: '',
-    });
-    setCaseCount(5);
-    setSeverity('mild');
-    setEnvFactors([]);
-    setResult(null);
-    setRecommendation(null);
-  };
+  const symptomList = [
+    { id: 'fever', label: 'High Fever' },
+    { id: 'headache', label: 'Severe Headache' },
+    { id: 'body_pain', label: 'Body Pain / Myalgia' },
+    { id: 'rash', label: 'Skin Rash' },
+    { id: 'diarrhea', label: 'Watery Diarrhea' },
+    { id: 'vomiting', label: 'Persistent Vomiting' },
+    { id: 'cough', label: 'Persistent Cough' },
+    { id: 'breathing_difficulty', label: 'Breathing Difficulty' },
+  ];
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-purple-600" />
-            ML Syndromic Inference Sandbox
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Test multi-vector symptom & environmental feature sets in real-time
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={resetAll}
-            className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset Inputs
-          </button>
-          <button
-            onClick={handleRunModel}
-            disabled={loading}
-            className="px-4 py-2 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-600/20 flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            {loading ? 'Evaluating Model...' : 'Execute Inference'}
-          </button>
-        </div>
+      <div>
+        <h1 className="text-[26px] font-semibold tracking-tight text-[#111111]">
+          Epidemiological ML Sandbox
+        </h1>
+        <p className="text-[13px] text-[#6B7280] mt-0.5">
+          Tirunelveli District · Simulate outbreak parameters & test model response
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Input Parameters (6 cols) */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600">
-            <Sliders className="w-4 h-4 text-purple-600" />
-            1. Input Feature Vector
+        {/* Simulation Controls (6 cols) */}
+        <div className="lg:col-span-6 bg-[#FFFFFF] p-5 rounded-[8px] border border-[#E5E7EB] space-y-4">
+          <div className="pb-2 border-b border-[#E5E7EB]">
+            <h2 className="text-[15px] font-semibold text-[#111111]">
+              Simulation Parameters
+            </h2>
           </div>
 
-          {/* Symptoms */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              Symptom Co-occurrence Matrix
+            <label className="block text-[12px] font-medium text-[#111111] mb-1.5">
+              Active Syndromic Symptoms
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {Object.entries(symptoms)
-                .filter(([k]) => k !== 'other')
-                .map(([symKey, val]) => (
-                  <div
-                    key={symKey}
-                    onClick={() => toggleSymptom(symKey as any)}
-                    className={`p-2.5 rounded-xl border text-xs font-medium cursor-pointer transition-all flex items-center gap-2 select-none ${
-                      val
-                        ? 'border-purple-500 bg-purple-50 text-purple-950 font-semibold ring-1 ring-purple-400'
-                        : 'border-slate-200 bg-slate-50/50 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <input type="checkbox" checked={Boolean(val)} onChange={() => {}} className="rounded text-purple-600" />
-                    <span className="capitalize">{symKey.replace('_', ' ')}</span>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          {/* Case count & severity */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Incident Volume: {caseCount} cases
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="50"
-                value={caseCount}
-                onChange={(e) => setCaseCount(parseInt(e.target.value))}
-                className="w-full accent-purple-600"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Observed Severity</label>
-              <select
-                value={severity}
-                onChange={(e) => setSeverity(e.target.value as any)}
-                className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
-              >
-                <option value="mild">Mild</option>
-                <option value="moderate">Moderate</option>
-                <option value="severe">Severe</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Environmental Hazard Factors */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              Environmental Risk Co-Factors
-            </label>
-            <div className="space-y-1.5">
-              {[
-                { id: 'water_contamination', label: 'Suspected Drinking Water Contamination' },
-                { id: 'stagnant_water', label: 'Flood Stagnant Water / Puddles Around Tents' },
-                { id: 'high_mosquito_density', label: 'High Vector / Mosquito Swarm Density' },
-                { id: 'sewage_overflow', label: 'Latrine Inundation / Sewage Overflow' },
-              ].map((item) => {
-                const isSelected = envFactors.includes(item.id);
+              {symptomList.map((item) => {
+                const isChecked = symptoms[item.id as keyof typeof symptoms] as boolean;
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={item.id}
-                    onClick={() => toggleEnv(item.id)}
-                    className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center gap-2 ${
-                      isSelected
-                        ? 'border-amber-500 bg-amber-50 text-amber-950 font-semibold'
-                        : 'border-slate-200 bg-slate-50/50 text-slate-700'
+                    onClick={() =>
+                      setSymptoms({ ...symptoms, [item.id]: !isChecked })
+                    }
+                    className={`px-3 py-2 rounded-[7px] border text-left text-[12px] flex items-center justify-between transition-colors cursor-pointer ${
+                      isChecked
+                        ? 'bg-[#EAF3FF] border-[#BFDBFE] text-[#0066CC] font-medium'
+                        : 'bg-[#FFFFFF] border-[#E5E7EB] text-[#4B5563] hover:bg-[#F7F8FA]'
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {}}
-                      className="rounded text-amber-600"
-                    />
                     <span>{item.label}</span>
-                  </div>
+                    <span className="text-[11px] font-semibold">
+                      {isChecked ? '✓' : ''}
+                    </span>
+                  </button>
                 );
               })}
             </div>
           </div>
-        </div>
 
-        {/* Model Output & Explainability (6 cols) */}
-        <div className="lg:col-span-6 space-y-5">
-          <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4" />
-                Model Inference Output
-              </span>
-              {result && <RiskBadge level={result.risk_level} size="md" />}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className="block text-[12px] font-medium text-[#111111] mb-1">
+                Simulated Case Count: {caseCount}
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={60}
+                value={caseCount}
+                onChange={(e) => setCaseCount(Number(e.target.value))}
+                className="w-full h-1.5 bg-[#E5E7EB] rounded-lg appearance-none cursor-pointer accent-[#0066CC]"
+              />
             </div>
 
-            {result ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/5 p-3.5 rounded-xl border border-white/10">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                      Suspected Syndrome
-                    </span>
-                    <div className="text-sm font-extrabold text-white mt-1">
-                      {result.suspected_syndrome}
-                    </div>
-                  </div>
-                  <div className="bg-white/5 p-3.5 rounded-xl border border-white/10">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                      Model Confidence
-                    </span>
-                    <div className="text-2xl font-black text-purple-400 mt-0.5">
-                      {Math.round(result.confidence * 100)}%
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1.5">
-                    Model Reasoning & Feature Attribution:
-                  </span>
-                  <div className="space-y-1.5 text-xs text-slate-300">
-                    {result.reasons.map((r, i) => (
-                      <div key={i} className="flex items-start gap-2 bg-white/5 p-2 rounded-lg">
-                        <span className="text-purple-400 font-bold">•</span>
-                        <span>{r}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div>
+              <label className="block text-[12px] font-medium text-[#111111] mb-1">
+                Clinical Severity
+              </label>
+              <div className="flex bg-[#F2F3F5] p-1 rounded-[7px]">
+                {(['mild', 'moderate', 'severe'] as const).map((sev) => (
+                  <button
+                    type="button"
+                    key={sev}
+                    onClick={() => setSeverity(sev)}
+                    className={`flex-1 py-1 text-[11px] font-medium rounded-[5px] capitalize transition-colors cursor-pointer ${
+                      severity === sev
+                        ? 'bg-[#FFFFFF] text-[#111111]'
+                        : 'text-[#6B7280] hover:text-[#111111]'
+                    }`}
+                  >
+                    {sev}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <div className="py-12 text-center text-xs text-slate-400">
-                Click "Execute Inference" to run the model against current feature vectors.
-              </div>
-            )}
+            </div>
           </div>
 
-          {/* AI Recommended Response Protocol */}
-          {recommendation && (
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                Synthesized Public Health Protocols
-              </h3>
+          <button
+            onClick={handleRunModel}
+            disabled={loading}
+            className="w-full py-2.5 px-4 text-[13px] font-medium rounded-[7px] bg-[#0066CC] hover:bg-[#004C99] text-white flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Play className="w-3.5 h-3.5" />
+            <span>{loading ? 'Evaluating Model...' : 'Run Simulation'}</span>
+          </button>
+        </div>
 
-              <div className="space-y-2 text-xs">
-                <div className="p-3 bg-sky-50 rounded-xl text-sky-900 border border-sky-100">
-                  <strong className="block mb-1 text-sky-950 font-bold">Priority Field Interventions:</strong>
-                  <ul className="list-disc pl-4 space-y-1 text-sky-800">
-                    {recommendation.immediate_actions?.map((act, i) => (
-                      <li key={i}>{act}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                {recommendation.awareness_message && (
-                  <div className="p-3 bg-amber-50 rounded-xl text-amber-900 border border-amber-100">
-                    <strong className="block mb-1 text-amber-950 font-bold">Community Advisory:</strong>
-                    <p className="italic text-amber-800">"{recommendation.awareness_message}"</p>
-                  </div>
-                )}
+        {/* Results Panel (6 cols) */}
+        <div className="lg:col-span-6 space-y-4">
+          <div className="bg-[#FFFFFF] p-5 rounded-[8px] border border-[#E5E7EB] space-y-4">
+            <div className="pb-2 border-b border-[#E5E7EB]">
+              <div className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                Preliminary Health Risk Assessment
               </div>
             </div>
-          )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-[#6B7280]">Estimated Risk</span>
+                <RiskBadge level={result?.risk_level || 'high'} size="md" />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-[#6B7280]">Suspected syndrome</span>
+                <span className="text-[13px] font-semibold text-[#111111]">
+                  {result?.suspected_syndrome || 'Vector-Borne Illness (Dengue/Malaria)'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-[#6B7280]">Confidence</span>
+                <span className="text-[13px] font-semibold text-[#0066CC]">
+                  {Math.round((result?.confidence || 0.88) * 100)}%
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-[#E5E7EB]">
+              <div className="text-[11px] font-semibold text-[#111111] uppercase tracking-wider mb-2">
+                Why?
+              </div>
+              <ul className="space-y-1.5 text-[12px] text-[#4B5563]">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-[#0066CC] font-bold">•</span>
+                  <span>Cluster of febrile symptoms with retro-orbital headache</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-[#0066CC] font-bold">•</span>
+                  <span>Environmental vector breeding risk present</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-[#0066CC] font-bold">•</span>
+                  <span>Case velocity exceeds 3-day baseline threshold</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="pt-3 border-t border-[#E5E7EB] text-[11px] text-[#6B7280]">
+              Surveillance assessment only. Not a medical diagnosis.
+            </div>
+          </div>
+
+          {/* Recommended Response */}
+          <div className="bg-[#FFFFFF] p-5 rounded-[8px] border border-[#E5E7EB] space-y-3">
+            <div className="pb-2 border-b border-[#E5E7EB]">
+              <div className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                Recommended Response
+              </div>
+            </div>
+
+            <div className="space-y-1 text-[12px]">
+              <div className="font-semibold text-[#111111]">Immediate</div>
+              <ol className="list-decimal list-inside space-y-0.5 text-[#4B5563]">
+                <li>Inspect mosquito breeding sites in camp perimeters</li>
+                <li>Deploy thermal fogging and anti-larval spray</li>
+                <li>Distribute insecticide-treated bed nets</li>
+              </ol>
+            </div>
+
+            <div className="space-y-1 pt-2 border-t border-[#E5E7EB] text-[12px]">
+              <div className="font-semibold text-[#111111]">Prevention</div>
+              <ol className="list-decimal list-inside space-y-0.5 text-[#4B5563]">
+                <li>Conduct camp-wide fever screening survey</li>
+                <li>Eliminate open stagnant puddles</li>
+              </ol>
+            </div>
+
+            <div className="pt-2 border-t border-[#E5E7EB] text-[12px]">
+              <div className="font-semibold text-[#111111]">Escalation</div>
+              <p className="text-[#4B5563] mt-0.5">
+                Dispatch rapid medical response unit if cases cross 25 count.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

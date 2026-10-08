@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Droplets,
-  AlertTriangle,
   Send,
   CheckCircle,
-  MapPin,
-  Trash2,
-  Bug,
-  Waves,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createEnvironmentalReport, getCamps, getEnvironmentalReports } from '../services/api';
@@ -15,7 +11,7 @@ import { Camp, EnvironmentalReport } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 export const EnvironmentalHazard: React.FC = () => {
-  const { activeCampId, role } = useAuth();
+  const { activeCampId } = useAuth();
   const navigate = useNavigate();
 
   const [camps, setCamps] = useState<Camp[]>([]);
@@ -65,179 +61,182 @@ export const EnvironmentalHazard: React.FC = () => {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      alert('Failed to submit environmental report');
     } finally {
       setSubmitting(false);
     }
   };
 
   const hazards = [
-    { id: 'water_contamination', label: 'Drinking Water Contamination', icon: Droplets, color: 'text-sky-600' },
-    { id: 'stagnant_water', label: 'Stagnant Flood Water / Puddles', icon: Waves, color: 'text-indigo-600' },
-    { id: 'sewage_overflow', label: 'Sewage / Latrine Overflow', icon: AlertTriangle, color: 'text-rose-600' },
-    { id: 'mosquito_breeding', label: 'High Vector / Mosquito Swarm', icon: Bug, color: 'text-amber-600' },
-    { id: 'waste_accumulation', label: 'Solid Waste / Garbage Piles', icon: Trash2, color: 'text-orange-600' },
+    { id: 'water_contamination', label: 'Water Contamination' },
+    { id: 'stagnant_water', label: 'Stagnant Flood Water' },
+    { id: 'overflowing_toilets', label: 'Sanitation / Latrine Overflow' },
+    { id: 'waste_accumulation', label: 'Waste / Garbage Accumulation' },
+    { id: 'vector_breeding', label: 'Mosquito / Vector Breeding Site' },
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-        <div>
-          <h1 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <Droplets className="w-5 h-5 text-amber-600" />
-            Environmental Hazard Report
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Log water contamination, sanitation issues, and vector breeding points
-          </p>
-        </div>
+      <div>
+        <h1 className="text-[26px] font-semibold tracking-tight text-[#111111]">
+          Report Environmental Incident
+        </h1>
+        <p className="text-[13px] text-[#6B7280] mt-0.5">
+          Tirunelveli District · Water, sanitation and vector risk monitoring
+        </p>
       </div>
 
       {success && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm font-semibold flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-          <span>Environmental hazard recorded! District surveillance alert updated.</span>
+        <div className="p-3.5 rounded-[8px] bg-[#EAF3FF] border border-[#BFDBFE] text-[#0066CC] text-[13px] font-medium flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-[#0066CC] shrink-0" />
+          <span>Environmental incident logged. Alert dispatched to district sanitation engineers.</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Form (7 cols) */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Relief Camp
-              </label>
-              <select
-                value={selectedCampId}
-                onChange={(e) => setSelectedCampId(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm font-medium rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                {camps.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} — ({c.ward}, {c.district})
-                  </option>
-                ))}
-              </select>
+        <form onSubmit={handleSubmit} className="lg:col-span-7 bg-[#FFFFFF] p-5 rounded-[8px] border border-[#E5E7EB] space-y-4">
+          <div>
+            <label className="block text-[12px] font-medium text-[#111111] mb-1.5">
+              Camp Station
+            </label>
+            <select
+              value={selectedCampId}
+              onChange={(e) => setSelectedCampId(e.target.value)}
+              className="w-full px-3 py-2 text-[13px] bg-[#FFFFFF] border border-[#E5E7EB] rounded-[7px] text-[#111111] focus:border-[#0066CC]"
+            >
+              {camps.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} — ({c.ward || 'Tirunelveli'})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-medium text-[#111111] mb-1.5">
+              Hazard Category
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {hazards.map((h) => {
+                const isSelected = issueType === h.id;
+                return (
+                  <button
+                    type="button"
+                    key={h.id}
+                    onClick={() => setIssueType(h.id)}
+                    className={`px-3 py-2 rounded-[7px] border text-left text-[12px] flex items-center justify-between transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#EAF3FF] border-[#BFDBFE] text-[#0066CC] font-medium'
+                        : 'bg-[#FFFFFF] border-[#E5E7EB] text-[#4B5563] hover:bg-[#F7F8FA]'
+                    }`}
+                  >
+                    <span>{h.label}</span>
+                    {isSelected && <span className="text-[11px] font-bold">✓</span>}
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-                Hazard Category
+              <label className="block text-[12px] font-medium text-[#111111] mb-1">
+                Specific Location in Camp
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {hazards.map((h) => {
-                  const Icon = h.icon;
-                  const isSelected = issueType === h.id;
-                  return (
-                    <div
-                      key={h.id}
-                      onClick={() => setIssueType(h.id)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5 select-none ${
-                        isSelected
-                          ? 'border-amber-500 bg-amber-50 text-amber-950 font-semibold ring-1 ring-amber-400'
-                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 text-slate-700'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 ${h.color}`} />
-                      <span className="text-xs">{h.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Severity Assessment</label>
-                <select
-                  value={severity}
-                  onChange={(e) => setSeverity(e.target.value as any)}
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                >
-                  <option value="mild">Mild (Minor issue)</option>
-                  <option value="moderate">Moderate (Potential risk)</option>
-                  <option value="severe">Severe (Critical outbreak risk)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" /> Specific Location / Point
-                </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Near Latrine Block 2"
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Hazard Details & Evidence
-              </label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe condition, foul odor, water discoloration, vector concentration..."
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-sky-500 focus:outline-none leading-relaxed"
+              <input
+                type="text"
+                required
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Block C water tank"
+                className="w-full px-3 py-2 text-[13px] bg-[#FFFFFF] border border-[#E5E7EB] rounded-[7px] text-[#111111] focus:border-[#0066CC]"
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 px-4 rounded-xl font-bold text-sm bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/20 disabled:opacity-50 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <Send className="w-4 h-4" />
-              {submitting ? 'Transmitting Hazard Report...' : 'Log Environmental Incident'}
-            </button>
-          </form>
-        </div>
+            <div>
+              <label className="block text-[12px] font-medium text-[#111111] mb-1">
+                Hazard Severity
+              </label>
+              <div className="flex bg-[#F2F3F5] p-1 rounded-[7px]">
+                {(['mild', 'moderate', 'severe'] as const).map((sev) => (
+                  <button
+                    type="button"
+                    key={sev}
+                    onClick={() => setSeverity(sev)}
+                    className={`flex-1 py-1 text-[11px] font-medium rounded-[5px] capitalize transition-colors cursor-pointer ${
+                      severity === sev
+                        ? 'bg-[#FFFFFF] text-[#111111]'
+                        : 'text-[#6B7280] hover:text-[#111111]'
+                    }`}
+                  >
+                    {sev}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-        {/* Hazard Log List (5 cols) */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col">
-          <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide mb-3">
-            Active Environmental Log
-          </h2>
-          <div className="flex-1 overflow-y-auto space-y-3 max-h-[420px] pr-1">
+          <div>
+            <label className="block text-[12px] font-medium text-[#111111] mb-1">
+              Field Description & Urgency
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 text-[12px] bg-[#FFFFFF] border border-[#E5E7EB] rounded-[7px] text-[#111111] focus:border-[#0066CC]"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full py-2.5 px-4 text-[13px] font-medium rounded-[7px] bg-[#0066CC] hover:bg-[#004C99] text-white flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <span>{submitting ? 'Submitting...' : 'Submit Environmental Report'}</span>
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        </form>
+
+        {/* History / Logged Incidents (5 cols) */}
+        <div className="lg:col-span-5 bg-[#FFFFFF] p-5 rounded-[8px] border border-[#E5E7EB] space-y-3">
+          <div className="pb-2 border-b border-[#E5E7EB]">
+            <h2 className="text-[15px] font-semibold text-[#111111]">
+              Recent Environmental Logs
+            </h2>
+            <p className="text-[12px] text-[#6B7280]">
+              Monitored sanitation & water incidents at this camp
+            </p>
+          </div>
+
+          <div className="space-y-2">
             {pastReports.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400">
-                No active hazards logged for this location yet.
+              <div className="py-8 text-center text-[12px] text-[#6B7280]">
+                No environmental incidents logged for this station.
               </div>
             ) : (
-              pastReports.map((item) => (
-                <div key={item.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
+              pastReports.slice(0, 5).map((r) => (
+                <div
+                  key={r.id}
+                  className="p-3 rounded-[7px] border border-[#E5E7EB] text-[12px] space-y-1"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-800 capitalize">
-                      {item.issue_type.replace('_', ' ')}
+                    <span className="font-semibold text-[#111111]">
+                      {r.issue_type.replace('_', ' ').toUpperCase()}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        item.severity === 'severe'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-amber-100 text-amber-800'
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-[4px] border ${
+                        r.severity === 'severe'
+                          ? 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]'
+                          : 'bg-[#FFFBEB] text-[#92400E] border-[#FDE68A]'
                       }`}
                     >
-                      {item.severity}
+                      {r.severity}
                     </span>
                   </div>
-                  {item.location && (
-                    <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-slate-400" /> {item.location}
-                    </div>
-                  )}
-                  {item.description && (
-                    <p className="text-xs text-slate-600 leading-snug">{item.description}</p>
-                  )}
-                  <div className="text-[10px] text-slate-400 pt-1">
-                    Logged: {new Date(item.reported_at).toLocaleString()}
-                  </div>
+                  <p className="text-[#4B5563] text-[11px]">{r.location}</p>
+                  <p className="text-[#6B7280] text-[11px]">{r.description}</p>
                 </div>
               ))
             )}

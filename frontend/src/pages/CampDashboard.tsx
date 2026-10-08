@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Tent,
-  Users,
-  Activity,
-  Droplets,
-  PlusCircle,
-  CheckCircle2,
+  Plus,
+  CheckCircle,
   Clock,
+  ArrowRight,
   AlertTriangle,
-  ClipboardList,
-  ChevronRight,
-  ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getCamp, getActions, getHealthReports, updateAction } from '../services/api';
@@ -61,267 +55,197 @@ export const CampDashboard: React.FC = () => {
     }
   };
 
+  const openActionsCount = actions.filter((a) => a.status !== 'completed').length;
+
   return (
     <div className="space-y-6">
       {/* Camp Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-teal-500/10 text-teal-700">
-            <Tent className="w-6 h-6" />
+      <div className="bg-[#FFFFFF] p-5 rounded-[8px] border border-[#E5E7EB] flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-[24px] font-semibold tracking-tight text-[#111111]">
+              {camp?.name || 'Camp 01 — Govt High School'}
+            </h1>
+            {camp && <RiskBadge level={camp.risk_level} size="sm" />}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-slate-900">{camp?.name || 'Relief Camp'}</h1>
-              {camp && <RiskBadge level={camp.risk_level} />}
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Ward: <span className="font-semibold text-slate-700">{camp?.ward || 'Ward 4'}</span> •{' '}
-              District: <span className="font-semibold text-slate-700">{camp?.district || 'Central'}</span>
-            </p>
-          </div>
+          <p className="text-[13px] text-[#6B7280] mt-0.5">
+            Tirunelveli District · {camp?.ward || 'Ward 4'} Station
+          </p>
         </div>
 
+        {/* Primary Action Buttons */}
         <div className="flex items-center gap-2.5">
           <NavLink
             to="/report"
-            className="px-4 py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-600/20 flex items-center gap-1.5 transition-all"
+            className="px-3.5 py-2 text-[12px] font-medium rounded-[7px] bg-[#0066CC] hover:bg-[#004C99] text-white flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <PlusCircle className="w-3.5 h-3.5" />
-            Report Health Incident
+            <Plus className="w-3.5 h-3.5" />
+            <span>Report Health Incident</span>
           </NavLink>
           <NavLink
             to="/environmental"
-            className="px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 flex items-center gap-1.5 transition-all"
+            className="px-3.5 py-2 text-[12px] font-medium rounded-[7px] bg-[#FFFFFF] hover:bg-[#F7F8FA] border border-[#E5E7EB] text-[#111111] flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <Droplets className="w-3.5 h-3.5" />
-            Report Environmental Risk
+            <Plus className="w-3.5 h-3.5" />
+            <span>Report Environmental Incident</span>
           </NavLink>
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-            <span>Shelter Population</span>
-            <Users className="w-4 h-4 text-slate-400" />
+      {/* Overview KPI Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-[#FFFFFF] p-4 rounded-[8px] border border-[#E5E7EB]">
+          <div className="text-[11px] font-medium text-[#6B7280] uppercase tracking-wider">
+            Population
           </div>
-          <div className="text-2xl font-black text-slate-900">
+          <div className="text-[28px] font-semibold text-[#111111] mt-1 tracking-tight">
             {camp?.population.toLocaleString() || '1,200'}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">Sheltered evacuees</div>
+          <div className="text-[11px] text-[#6B7280] mt-0.5">Sheltered residents</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-            <span>Active Cases</span>
-            <Activity className="w-4 h-4 text-rose-500" />
+        <div className="bg-[#FFFFFF] p-4 rounded-[8px] border border-[#E5E7EB]">
+          <div className="text-[11px] font-medium text-[#6B7280] uppercase tracking-wider">
+            Active Cases
           </div>
-          <div className="text-2xl font-black text-rose-600">{camp?.active_cases || 0}</div>
-          <div className="text-[11px] text-rose-500 font-medium mt-1">Requires medical oversight</div>
+          <div className="text-[28px] font-semibold text-[#DC2626] mt-1 tracking-tight">
+            {camp?.active_cases || 0}
+          </div>
+          <div className="text-[11px] text-[#6B7280] mt-0.5">Under surveillance</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-            <span>Primary Syndrome</span>
-            <ShieldAlert className="w-4 h-4 text-amber-500" />
+        <div className="bg-[#FFFFFF] p-4 rounded-[8px] border border-[#E5E7EB]">
+          <div className="text-[11px] font-medium text-[#6B7280] uppercase tracking-wider">
+            Current Risk
           </div>
-          <div className="text-sm font-bold text-slate-800 truncate mt-1">
-            {camp?.top_syndrome || 'None Detected'}
+          <div className="mt-2">
+            <RiskBadge level={camp?.risk_level || 'low'} size="md" />
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">Surveillance assessment</div>
+          <div className="text-[11px] text-[#6B7280] mt-1.5 truncate">
+            {camp?.top_syndrome || 'Gastrointestinal'}
+          </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-            <span>Pending Action Directives</span>
-            <ClipboardList className="w-4 h-4 text-teal-600" />
+        <div className="bg-[#FFFFFF] p-4 rounded-[8px] border border-[#E5E7EB]">
+          <div className="text-[11px] font-medium text-[#6B7280] uppercase tracking-wider">
+            Open Actions
           </div>
-          <div className="text-2xl font-black text-teal-700">
-            {actions.filter((a) => a.status !== 'completed').length}
+          <div className="text-[28px] font-semibold text-[#111111] mt-1 tracking-tight">
+            {openActionsCount}
           </div>
-          <div className="text-[11px] text-teal-600 font-medium mt-1">From District Admin</div>
+          <div className="text-[11px] text-[#6B7280] mt-0.5">District directives</div>
         </div>
       </div>
 
-      {/* Directives & Action Items from District Admin */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-teal-600" />
-              Assigned Field Directives
-            </h2>
-            <p className="text-xs text-slate-400">
-              Response and sanitation measures issued by District Health
-            </p>
+      {/* Two Column Layout: Open Directives + Recent Incident Reports */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Open Directives List */}
+        <div className="bg-[#FFFFFF] p-4 rounded-[8px] border border-[#E5E7EB] space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#111111]">
+                District Action Directives
+              </h2>
+              <p className="text-[12px] text-[#6B7280]">
+                Response instructions assigned by District Health Officer
+              </p>
+            </div>
+            <span className="text-[12px] font-medium text-[#6B7280]">
+              {actions.length} total
+            </span>
           </div>
-          <span className="text-xs font-bold bg-teal-50 text-teal-800 px-2.5 py-1 rounded-lg">
-            {actions.filter((a) => a.status === 'completed').length} / {actions.length} Done
-          </span>
-        </div>
 
-        {actions.length === 0 ? (
-          <div className="p-8 text-center border-2 border-dashed border-slate-100 rounded-xl text-slate-400 text-xs">
-            No active directives assigned to this camp.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {actions.map((act) => (
-              <div
-                key={act.id}
-                className={`p-4 rounded-xl border transition-all ${
-                  act.status === 'completed'
-                    ? 'border-emerald-200 bg-emerald-50/30'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                          act.priority === 'critical'
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {act.priority}
-                      </span>
-                      <h3
-                        className={`text-sm font-bold ${
-                          act.status === 'completed' ? 'text-slate-500 line-through' : 'text-slate-900'
-                        }`}
-                      >
-                        {act.title}
-                      </h3>
-                    </div>
-                    {act.description && (
-                      <p className="text-xs text-slate-600 leading-relaxed">{act.description}</p>
-                    )}
-                    {act.instructions && (
-                      <div className="text-xs font-mono bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-slate-700 mt-2 whitespace-pre-line">
-                        {act.instructions}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="shrink-0 flex flex-col items-end gap-2">
-                    <button
-                      onClick={() => handleStatusChange(act.id, act.status)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        act.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-800 cursor-default'
-                          : act.status === 'in_progress'
-                          ? 'bg-amber-500 text-white hover:bg-amber-600'
-                          : 'bg-sky-600 text-white hover:bg-sky-700'
-                      }`}
-                    >
-                      {act.status === 'completed' ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Resolved
-                        </>
-                      ) : act.status === 'in_progress' ? (
-                        <>
-                          <Clock className="w-3.5 h-3.5" /> Mark Completed
-                        </>
-                      ) : (
-                        <>
-                          <ChevronRight className="w-3.5 h-3.5" /> Start Action
-                        </>
-                      )}
-                    </button>
-                    {act.deadline && (
-                      <span className="text-[10px] text-slate-400 font-medium">Due: {act.deadline}</span>
-                    )}
-                  </div>
-                </div>
+          <div className="space-y-2">
+            {actions.length === 0 ? (
+              <div className="py-8 text-center text-[12px] text-[#6B7280]">
+                No pending directives assigned to this camp.
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            ) : (
+              actions.map((act) => {
+                const isComplete = act.status === 'completed';
+                return (
+                  <div
+                    key={act.id}
+                    className="p-3 rounded-[7px] border border-[#E5E7EB] hover:bg-[#F7F8FA] transition-colors space-y-1.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-medium text-[13px] text-[#111111]">
+                        {act.title}
+                      </div>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-[4px] border ${
+                          isComplete
+                            ? 'bg-[#EAF3FF] text-[#0066CC] border-[#BFDBFE]'
+                            : 'bg-[#FFFBEB] text-[#92400E] border-[#FDE68A]'
+                        }`}
+                      >
+                        {act.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </div>
 
-      {/* Incident Submissions History */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">
-              Recent Health Submissions
-            </h2>
-            <p className="text-xs text-slate-500">History of incident reports submitted by this camp</p>
+                    <p className="text-[12px] text-[#4B5563] whitespace-pre-line leading-relaxed">
+                      {act.instructions || act.description}
+                    </p>
+
+                    <div className="pt-2 flex items-center justify-between text-[11px] text-[#6B7280]">
+                      <span>Target: within 6 hours</span>
+                      <button
+                        onClick={() => handleStatusChange(act.id, act.status)}
+                        className="text-[#0066CC] hover:text-[#004C99] font-medium flex items-center gap-1 cursor-pointer"
+                      >
+                        {isComplete ? 'Mark Re-opened' : 'Advance Progress →'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-400 uppercase font-semibold text-[10px]">
-                <th className="py-2.5 px-3">Date/Time</th>
-                <th className="py-2.5 px-3">Cases</th>
-                <th className="py-2.5 px-3">Symptoms Reported</th>
-                <th className="py-2.5 px-3">Severity</th>
-                <th className="py-2.5 px-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {reports.slice(0, 5).map((rep) => {
-                const activeSymptoms = Object.entries(rep.symptoms || {})
-                  .filter(([k, v]) => v === true && k !== 'other')
-                  .map(([k]) => k.replace('_', ' '));
+        {/* Recent Health Reports */}
+        <div className="bg-[#FFFFFF] p-4 rounded-[8px] border border-[#E5E7EB] space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#111111]">
+                Recent Incident Logs
+              </h2>
+              <p className="text-[12px] text-[#6B7280]">
+                Syndromic logs submitted from this camp
+              </p>
+            </div>
+            <NavLink
+              to="/report"
+              className="text-[12px] font-medium text-[#0066CC] hover:text-[#004C99]"
+            >
+              + New Report
+            </NavLink>
+          </div>
 
-                return (
-                  <tr key={rep.id} className="hover:bg-slate-50">
-                    <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
-                      {new Date(rep.reported_at).toLocaleString([], {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </td>
-                    <td className="py-3 px-3 font-bold text-slate-900">{rep.case_count} cases</td>
-                    <td className="py-3 px-3 text-slate-700">
-                      <div className="flex flex-wrap gap-1">
-                        {activeSymptoms.map((sym, i) => (
-                          <span
-                            key={i}
-                            className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] capitalize"
-                          >
-                            {sym}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          rep.severity === 'severe'
-                            ? 'bg-rose-100 text-rose-800'
-                            : rep.severity === 'moderate'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {rep.severity}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          rep.verification_status === 'verified'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {rep.verification_status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="space-y-2">
+            {reports.length === 0 ? (
+              <div className="py-8 text-center text-[12px] text-[#6B7280]">
+                No health incidents logged yet.
+              </div>
+            ) : (
+              reports.slice(0, 5).map((rep) => (
+                <div
+                  key={rep.id}
+                  className="p-3 rounded-[7px] border border-[#E5E7EB] flex items-center justify-between text-[12px]"
+                >
+                  <div>
+                    <div className="font-medium text-[#111111]">
+                      {rep.risk_assessment?.suspected_syndrome || 'Syndromic report'}
+                    </div>
+                    <div className="text-[#6B7280] text-[11px] mt-0.5">
+                      {rep.case_count} cases · {rep.notes ? rep.notes.substring(0, 45) + '...' : 'Water/sanitation trigger'}
+                    </div>
+                  </div>
+                  <RiskBadge level={rep.risk_assessment?.risk_level || 'low'} size="sm" />
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

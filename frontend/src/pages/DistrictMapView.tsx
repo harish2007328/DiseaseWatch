@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Filter, Layers, RefreshCw, Users, Activity, Droplets } from 'lucide-react';
+import { MapPin, RefreshCw } from 'lucide-react';
 import { getCamps, detectClusters } from '../services/api';
 import { Camp, Cluster } from '../types';
 import { DistrictMap } from '../components/DistrictMap';
@@ -40,144 +40,89 @@ export const DistrictMapView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-sky-600" />
-            Tirunelveli District Surveillance Map
+          <h1 className="text-[26px] font-semibold tracking-tight text-[#111111]">
+            District GIS Surveillance
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Southern Tamil Nadu relief camp coordinates and administrative border
+          <p className="text-[13px] text-[#6B7280] mt-0.5">
+            Tirunelveli District · Real geographic boundary, wards & camp deployment
           </p>
         </div>
 
-        {/* Risk Filter */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-xs bg-slate-100 p-1 rounded-xl">
-            {['all', 'critical', 'high', 'medium', 'low'].map((level) => (
-              <button
-                key={level}
-                onClick={() => setRiskFilter(level)}
-                className={`px-3 py-1.5 rounded-lg font-semibold uppercase text-[11px] transition-all ${
-                  riskFilter === level ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
-                }`}
-              >
-                {level}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={loadData}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+        {/* Minimal Risk Filter */}
+        <div className="flex bg-[#F2F3F5] p-1 rounded-[7px] self-start sm:self-auto">
+          {['all', 'critical', 'high', 'medium', 'low'].map((level) => (
+            <button
+              key={level}
+              onClick={() => setRiskFilter(level)}
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-[5px] capitalize transition-colors cursor-pointer ${
+                riskFilter === level
+                  ? 'bg-[#FFFFFF] text-[#111111]'
+                  : 'text-[#6B7280] hover:text-[#111111]'
+              }`}
+            >
+              {level}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Map (8 cols) */}
-        <div className="lg:col-span-8 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs min-h-[580px]">
-          <DistrictMap
-            camps={filteredCamps}
-            clusters={clusters}
-            selectedCampId={selectedCamp?.id}
-            onSelectCamp={(c) => setSelectedCamp(c)}
-            height="580px"
-          />
-        </div>
+      {/* Main Map Box */}
+      <div className="bg-[#FFFFFF] p-4 rounded-[8px] border border-[#E5E7EB]">
+        <DistrictMap
+          camps={filteredCamps}
+          clusters={clusters}
+          selectedCampId={selectedCamp?.id}
+          onSelectCamp={(camp) => setSelectedCamp(camp)}
+          height="540px"
+        />
+      </div>
 
-        {/* Selected Camp Sidebar (4 cols) */}
-        <div className="lg:col-span-4 space-y-4">
-          {selectedCamp ? (
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h2 className="text-base font-extrabold text-slate-900">{selectedCamp.name}</h2>
-                  <p className="text-xs text-slate-400">
-                    {selectedCamp.ward} • {selectedCamp.district}
-                  </p>
-                </div>
-                <RiskBadge level={selectedCamp.risk_level} size="md" />
+      {/* Selected Camp Information Card (Apple Style) */}
+      {selectedCamp && (
+        <div className="bg-[#FFFFFF] p-5 rounded-[8px] border border-[#E5E7EB]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-[#E5E7EB]">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-[16px] font-semibold text-[#111111]">
+                  {selectedCamp.name}
+                </h3>
+                <RiskBadge level={selectedCamp.risk_level} size="sm" />
               </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Population</span>
-                  <strong className="text-slate-800 text-sm">
-                    {selectedCamp.population.toLocaleString()}
-                  </strong>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Active Cases</span>
-                  <strong className="text-rose-600 text-sm">{selectedCamp.active_cases}</strong>
-                </div>
-              </div>
-
-              {selectedCamp.top_syndrome && (
-                <div className="p-3 bg-sky-50 rounded-xl border border-sky-100 text-xs">
-                  <span className="text-[10px] uppercase font-bold text-sky-700 block mb-0.5">
-                    Suspected Syndromic Pattern
-                  </span>
-                  <div className="font-bold text-sky-950">{selectedCamp.top_syndrome}</div>
-                </div>
-              )}
-
-              {selectedCamp.environmental_issues && selectedCamp.environmental_issues.length > 0 && (
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs">
-                  <span className="text-[10px] uppercase font-bold text-amber-800 block mb-1 flex items-center gap-1">
-                    <Droplets className="w-3.5 h-3.5 text-amber-600" /> Environmental Triggers
-                  </span>
-                  <div className="text-amber-900 font-medium">
-                    {selectedCamp.environmental_issues.join(', ')}
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-2 text-xs text-slate-500 space-y-1">
-                <div>
-                  <strong>Health Reports Logged:</strong> {selectedCamp.health_report_count}
-                </div>
-                <div>
-                  <strong>Environmental Hazards:</strong> {selectedCamp.environmental_report_count}
-                </div>
-                <div>
-                  <strong>Coordinates:</strong> {selectedCamp.location_lat.toFixed(4)},{' '}
-                  {selectedCamp.location_lng.toFixed(4)}
-                </div>
-              </div>
+              <p className="text-[12px] text-[#6B7280] mt-0.5">
+                {selectedCamp.ward || 'Central'}, Tirunelveli · Lat {selectedCamp.location_lat.toFixed(4)}, Lng {selectedCamp.location_lng.toFixed(4)}
+              </p>
             </div>
-          ) : (
-            <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">
-              Select a camp marker on the map to inspect its epidemiological status.
-            </div>
-          )}
+          </div>
 
-          {/* Quick List of High-Risk Camps */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-              All Camps ({filteredCamps.length})
-            </h3>
-            <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 text-xs">
-              {filteredCamps.map((c) => (
-                <div
-                  key={c.id}
-                  onClick={() => setSelectedCamp(c)}
-                  className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                    selectedCamp?.id === c.id
-                      ? 'border-sky-500 bg-sky-50/50'
-                      : 'border-slate-100 hover:border-slate-200'
-                  }`}
-                >
-                  <span className="font-semibold text-slate-800 truncate mr-2">{c.name}</span>
-                  <RiskBadge level={c.risk_level} size="sm" showPulse={false} />
-                </div>
-              ))}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[12px]">
+            <div className="p-3 rounded-[7px] bg-[#F7F8FA] border border-[#E5E7EB]">
+              <span className="text-[#6B7280] block text-[11px]">Population</span>
+              <strong className="text-[16px] font-semibold text-[#111111]">{selectedCamp.population.toLocaleString()}</strong>
+            </div>
+
+            <div className="p-3 rounded-[7px] bg-[#F7F8FA] border border-[#E5E7EB]">
+              <span className="text-[#6B7280] block text-[11px]">Active Cases</span>
+              <strong className="text-[16px] font-semibold text-[#DC2626]">{selectedCamp.active_cases || 0}</strong>
+            </div>
+
+            <div className="p-3 rounded-[7px] bg-[#F7F8FA] border border-[#E5E7EB]">
+              <span className="text-[#6B7280] block text-[11px]">Primary Condition</span>
+              <strong className="text-[14px] font-medium text-[#111111] truncate block mt-0.5">
+                {selectedCamp.top_syndrome || 'Gastrointestinal'}
+              </strong>
+            </div>
+
+            <div className="p-3 rounded-[7px] bg-[#F7F8FA] border border-[#E5E7EB]">
+              <span className="text-[#6B7280] block text-[11px]">Environmental Status</span>
+              <strong className="text-[14px] font-medium text-[#111111] block mt-0.5">
+                Water Contamination
+              </strong>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

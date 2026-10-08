@@ -3,58 +3,53 @@ import React from 'react';
 interface RiskBadgeProps {
   level: 'low' | 'medium' | 'high' | 'critical' | string;
   size?: 'sm' | 'md' | 'lg';
-  showPulse?: boolean;
+  showDot?: boolean;
 }
 
-export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, size = 'md', showPulse = true }) => {
+export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, size = 'sm', showDot = true }) => {
   const normLevel = (level || 'low').toLowerCase();
 
   const styles = {
     low: {
-      bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      dot: 'bg-emerald-500',
-      label: 'Low Risk',
+      bg: 'bg-[#F2F3F5] text-[#374151] border-[#E5E7EB]',
+      dot: 'bg-[#6B7280]',
+      label: 'Low',
     },
     medium: {
-      bg: 'bg-amber-50 text-amber-700 border-amber-200',
-      dot: 'bg-amber-500',
-      label: 'Moderate Risk',
+      bg: 'bg-[#FFFBEB] text-[#92400E] border-[#FDE68A]',
+      dot: 'bg-[#D97706]',
+      label: 'Medium',
     },
     high: {
-      bg: 'bg-orange-50 text-orange-700 border-orange-200',
-      dot: 'bg-orange-500',
-      label: 'High Risk',
+      bg: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]',
+      dot: 'bg-[#DC2626]',
+      label: 'High',
     },
     critical: {
-      bg: 'bg-rose-50 text-rose-700 border-rose-200',
-      dot: 'bg-rose-600',
-      label: 'Critical Alert',
+      bg: 'bg-[#FEF2F2] text-[#7F1D1D] border-[#FCA5A5]',
+      dot: 'bg-[#991B1B]',
+      label: 'Critical',
     },
   }[normLevel] || {
-    bg: 'bg-slate-50 text-slate-700 border-slate-200',
-    dot: 'bg-slate-500',
-    label: normLevel.toUpperCase(),
+    bg: 'bg-[#F2F3F5] text-[#374151] border-[#E5E7EB]',
+    dot: 'bg-[#6B7280]',
+    label: normLevel,
   };
 
   const sizeClasses = {
-    sm: 'text-xs px-2 py-0.5 font-medium',
-    md: 'text-xs px-2.5 py-1 font-semibold',
-    lg: 'text-sm px-3.5 py-1.5 font-bold',
+    sm: 'text-[11px] px-2 py-0.5 font-medium',
+    md: 'text-xs px-2.5 py-1 font-medium',
+    lg: 'text-xs px-3 py-1.5 font-semibold',
   }[size];
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border shadow-xs tracking-wide uppercase ${styles.bg} ${sizeClasses}`}
+      className={`inline-flex items-center gap-1.5 rounded-[5px] border ${styles.bg} ${sizeClasses} tracking-tight`}
     >
-      <span className="relative flex h-2 w-2">
-        {showPulse && (normLevel === 'high' || normLevel === 'critical') && (
-          <span
-            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${styles.dot}`}
-          />
-        )}
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${styles.dot}`} />
-      </span>
-      {styles.label}
+      {showDot && (
+        <span className={`inline-block w-1.5 h-1.5 rounded-full ${styles.dot}`} />
+      )}
+      <span>{styles.label}</span>
     </span>
   );
 };
