@@ -676,24 +676,53 @@ class DemoDataStore:
         self.actions = generate_actions(self.alerts)
         self.notifications = generate_notifications(self.alerts, self.actions)
 
+    def resolve_camp_id(self, camp_id: str) -> str:
+        if not camp_id:
+            return camp_id
+        # Check direct match
+        for c in self.camps:
+            if c["id"] == camp_id:
+                return c["id"]
+        clean_id = str(camp_id).lower().strip()
+        for i, c in enumerate(self.camps):
+            c_name = c["name"].lower()  # e.g. "camp 01"
+            c_slug = c_name.replace(" ", "-")  # "camp-01"
+            c_short_slug = f"camp-{i + 1}"  # "camp-1"
+            if clean_id in (c_name, c_slug, c_short_slug):
+                return c["id"]
+        if clean_id.startswith("camp-"):
+            try:
+                num = int(clean_id.split("-")[1])
+                if 1 <= num <= len(self.camps):
+                    return self.camps[num - 1]["id"]
+            except ValueError:
+                pass
+        return camp_id
+
     def get_camp(self, camp_id: str):
-        return next((c for c in self.camps if c["id"] == camp_id), None)
+        real_id = self.resolve_camp_id(camp_id)
+        return next((c for c in self.camps if c["id"] == real_id), None)
 
     def get_camp_health_reports(self, camp_id: str):
-        return [r for r in self.health_reports if r["camp_id"] == camp_id]
+        real_id = self.resolve_camp_id(camp_id)
+        return [r for r in self.health_reports if r["camp_id"] == real_id]
 
     def get_camp_env_reports(self, camp_id: str):
-        return [r for r in self.environmental_reports if r["camp_id"] == camp_id]
+        real_id = self.resolve_camp_id(camp_id)
+        return [r for r in self.environmental_reports if r["camp_id"] == real_id]
 
     def get_camp_alerts(self, camp_id: str):
-        return [a for a in self.alerts if a["camp_id"] == camp_id]
+        real_id = self.resolve_camp_id(camp_id)
+        return [a for a in self.alerts if a["camp_id"] == real_id]
 
     def get_camp_actions(self, camp_id: str):
-        return [a for a in self.actions if a["camp_id"] == camp_id]
+        real_id = self.resolve_camp_id(camp_id)
+        return [a for a in self.actions if a["camp_id"] == real_id]
 
     def get_camp_notifications(self, camp_id: str):
+        real_id = self.resolve_camp_id(camp_id)
         return sorted(
-            [n for n in self.notifications if n["camp_id"] == camp_id],
+            [n for n in self.notifications if n["camp_id"] == real_id],
             key=lambda x: x["created_at"], reverse=True
         )
 
@@ -704,15 +733,16 @@ class DemoDataStore:
         )
 
     def get_camp_detail(self, camp_id: str):
-        camp = self.get_camp(camp_id)
+        real_id = self.resolve_camp_id(camp_id)
+        camp = self.get_camp(real_id)
         if not camp:
             return None
 
-        h_reports = self.get_camp_health_reports(camp_id)
-        e_reports = self.get_camp_env_reports(camp_id)
-        assessments = [a for a in self.risk_assessments if a["camp_id"] == camp_id]
-        alerts = self.get_camp_alerts(camp_id)
-        actions = self.get_camp_actions(camp_id)
+        h_reports = self.get_camp_health_reports(real_id)
+        e_reports = self.get_camp_env_reports(real_id)
+        assessments = [a for a in self.risk_assessments if a["camp_id"] == real_id]
+        alerts = self.get_camp_alerts(real_id)
+        actions = self.get_camp_actions(real_id)
 
         # Calculate stats
         total_cases = sum(r["case_count"] for r in h_reports)
