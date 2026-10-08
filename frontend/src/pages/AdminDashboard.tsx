@@ -180,7 +180,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Screen-Fit Command Center: Fixed Full-Height Map on Left, Scrollable Values on Right */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 overflow-hidden lg:h-[calc(100vh-140px)] min-h-[520px]">
         {/* ========================================================= */}
         {/* LEFT COLUMN (7 COLS): FULL-HEIGHT GIS MAP + STATION DROPDOWN */}
         {/* ========================================================= */}

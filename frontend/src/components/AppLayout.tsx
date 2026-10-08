@@ -238,9 +238,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
           </div>
         </aside>
 
-        {/* Content View Canvas */}
-        <main className="flex-1 overflow-y-auto lg:overflow-hidden p-3 lg:p-4 flex flex-col min-h-0">
-          <div className="w-full h-full flex flex-col min-h-0">
+        {/* Content View Canvas - Always vertically scrollable for forms and pages */}
+        <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 flex flex-col min-h-0">
+          <div className="w-full flex-1 flex flex-col min-h-0">
             {children}
           </div>
         </main>
